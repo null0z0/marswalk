@@ -1,8 +1,0 @@
-@import "tailwindcss";
-
-.map-shell{height:50vh;flex:none}
-@media (min-width:768px){.map-shell{height:auto;flex:1 1 0%}}
-/* station tooltips: nowrap on desktop; fixed-width wrap on small screens so
-   long labels (Kodiak candidate + LOST) never clip off the viewport edge */
-.station-label{white-space:nowrap}
-@media (max-width:767px){.station-label{white-space:normal;width:150px;text-align:center;line-height:1.2}}
