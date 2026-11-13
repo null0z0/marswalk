@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import MapView from './components/MapView.jsx';
+
+const Terrain3D = lazy(() => import('./components/Terrain3D.jsx'));
 import MissionStatusBar from './components/MissionStatusBar.jsx';
 import StationPanel from './components/StationPanel.jsx';
 import TimeControl from './components/TimeControl.jsx';
@@ -20,6 +22,7 @@ export default function App() {
   const [mustHaves, setMustHaves] = useState([]);
   const [visited, setVisited] = useState([]);
   const [showGeology, setShowGeology] = useState(true);
+  const [viewMode, setViewMode] = useState('2d');
 
   useEffect(() => {
     fetch('/data/legs.json').then(r => r.json()).then(setLegsData);
@@ -44,10 +47,24 @@ export default function App() {
             droppedIds={plan.dropped.map(d => d.id)} visitedLegs={plan.visitedLegs} />
         </div>
         <div className="relative map-shell order-1 md:order-2">
-          <MapView stations={stations} plan={plan} showGeology={showGeology} setShowGeology={setShowGeology} geojson={geojson} />
-          <label className="absolute top-2 right-2 z-[1000] bg-[#0d1420] border border-cyan-900 rounded px-2 py-1 text-[10px]">
-            <input type="checkbox" checked={showGeology} onChange={e => setShowGeology(e.target.checked)} /> USGS geology (SIM 3464)
-          </label>
+          {viewMode === '2d' ? (
+            <MapView stations={stations} plan={plan} showGeology={showGeology} setShowGeology={setShowGeology} geojson={geojson} />
+          ) : (
+            <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">Loading 3D view...</div>}>
+              <Terrain3D stations={stations} plan={plan} />
+            </Suspense>
+          )}
+          <div className="absolute top-2 right-2 z-[1001] flex rounded overflow-hidden border border-cyan-900 text-[10px] font-mono">
+            <button onClick={() => setViewMode('2d')}
+              className={viewMode === '2d' ? 'px-2 py-1 bg-cyan-700 text-white' : 'px-2 py-1 bg-[#0d1420] text-cyan-300'}>2D Map</button>
+            <button onClick={() => setViewMode('3d')}
+              className={viewMode === '3d' ? 'px-2 py-1 bg-cyan-700 text-white' : 'px-2 py-1 bg-[#0d1420] text-cyan-300'}>3D Terrain</button>
+          </div>
+          {viewMode === '2d' && (
+            <label className="absolute top-11 right-2 z-[1000] bg-[#0d1420] border border-cyan-900 rounded px-2 py-1 text-[10px]">
+              <input type="checkbox" checked={showGeology} onChange={e => setShowGeology(e.target.checked)} /> USGS geology (SIM 3464)
+            </label>
+          )}
         </div>
         <div className="w-full md:w-80 md:overflow-y-auto p-2 space-y-2 border-l border-cyan-900 order-3">
           <TimeControl windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh}
