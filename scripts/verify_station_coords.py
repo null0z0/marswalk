@@ -20,6 +20,7 @@ SRC = {
     'Wildcat': ('data_raw/waypoints_2022-07-19.json', 502),
     'Skinner': ('data_raw/waypoints_2022-06-26.json', 477),
     'Depot': ('data_raw/waypoints_2022-12-23.json', 654),
+    'Kukaklek': ('data_raw/waypoints_2022-12-23.json', 629),
 }
 ok = True
 for sid, (path, sol) in SRC.items():

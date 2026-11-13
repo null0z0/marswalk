@@ -68,7 +68,7 @@ for sid, s in stations.items():
 # would not be legs.json compared with itself.
 
 # 4. station coordinates == archived NASA waypoint drive records (5-decimal rounding only)
-SRC = {'Wildcat': ('data_raw/waypoints_2022-07-19.json', 502), 'Skinner': ('data_raw/waypoints_2022-06-26.json', 477), 'Depot': ('data_raw/waypoints_2022-12-23.json', 654)}
+SRC = {'Wildcat': ('data_raw/waypoints_2022-07-19.json', 502), 'Skinner': ('data_raw/waypoints_2022-06-26.json', 477), 'Depot': ('data_raw/waypoints_2022-12-23.json', 654), 'Kukaklek': ('data_raw/waypoints_2022-12-23.json', 629)}
 for sid, (path, sol) in SRC.items():
     feats = json.load(open(path))['features']
     recs = [f for f in feats if f['properties'].get('sol') == sol]
@@ -81,7 +81,8 @@ for sid, (path, sol) in SRC.items():
 # the rover was still at that record when the samples were sealed (sample names,
 # features and sols per the NASA samples catalog, science.nasa.gov).
 PARKED = [('data_raw/waypoints_2022-07-19.json', 477, 495, 'sol-477 (Skinner; Swift Run 490, Skyland 495)'),
-          ('data_raw/waypoints_2022-12-23.json', 502, 516, 'sol-502 (Wildcat; Hazeltop 509, Bearwallow 516)')]
+          ('data_raw/waypoints_2022-12-23.json', 502, 516, 'sol-502 (Wildcat; Hazeltop 509, Bearwallow 516)'),
+          ('data_raw/waypoints_2022-12-23.json', 629, 631, 'sol-629 (Kukaklek; Kukaklek 631)')]
 for path, base_sol, last_sample_sol, label in PARKED:
     feats = json.load(open(path))['features']
     others = sorted({f['properties']['sol'] for f in feats

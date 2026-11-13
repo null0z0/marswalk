@@ -18,7 +18,7 @@ export default function App() {
   const [windowMin, setWindowMin] = useState(300);
   const [dwellMin, setDwellMin] = useState(60);
   const [paceKmh, setPaceKmh] = useState(1.0);
-  const [priorities, setPriorities] = useState({ Wildcat: 1, Skinner: 2 });
+  const [priorities, setPriorities] = useState({ Wildcat: 1, Skinner: 2, Kukaklek: 3 });
   const [mustHaves, setMustHaves] = useState([]);
   const [visited, setVisited] = useState([]);
   const [showGeology, setShowGeology] = useState(true);

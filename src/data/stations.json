@@ -5,9 +5,11 @@
   "lat": 18.45253,
   "lon": 77.40784,
   "unit": "Njf (Jezero floor unit, SIM 3464 point-in-polygon)",
+  "unitDescription": "Volcanic or impact-modified floor unit underlying the delta (USGS SIM 3464).",
   "objective": "Start/return point. Real Perseverance sample-depot location; the crewed habitat is hypothetical.",
-  "photo": null,
-  "photoNote": null,
+  "photo": "/img/base_context.jpg",
+  "photoNote": "Sol 654, Mastcam-Z left camera.",
+  "photoId": "ZL0_0654_0724997362_303EBY_N0320148ZCAM08649_0340LMJ",
   "flags": [
    "Hypothetical habitat at a real depot location",
    "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, recorded while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point."
@@ -19,13 +21,15 @@
   "name": "Wildcat Ridge",
   "lat": 18.45865,
   "lon": 77.40592,
-  "unit": "NHjf2 (Jezero fan 2 unit, SIM 3464 point-in-polygon)",
+  "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+  "unitDescription": "Clastic delta fan unit deposited by river inflow into Jezero paleolake (USGS SIM 3464).",
   "objective": "Fine-grained delta-front mudstones recording quiet-water deposition; the rover found organic signals correlated with sulfates here (not evidence of life).",
   "photo": "/img/wildcat.jpg",
   "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
   "photoId": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
   "flags": [
-   "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
+   "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+   "Dwell time 60 min is a declared minimum protocol time (scenario assumption; not shortenable in UI)"
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
  },
@@ -34,15 +38,33 @@
   "name": "Skinner Ridge",
   "lat": 18.4589,
   "lon": 77.40617,
-  "unit": "NHjf2 (Jezero fan 2 unit, SIM 3464 point-in-polygon)",
+  "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+  "unitDescription": "Clastic delta fan unit deposited by river inflow into Jezero paleolake (USGS SIM 3464).",
   "objective": "Layered sandstone with grains transported from far outside Jezero - sediment provenance and transport energy.",
   "photo": "/img/skinner.jpg",
   "photoNote": "Mastcam-Z left 110mm frame, sol 477 (NASA raw image ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
   "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
   "flags": [
    "Stop position = last recorded rover position near the Swift Run / Skyland sample location (samples sealed sols 490 and 495 at Skinner Ridge per the NASA samples catalog; sol-477 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-   "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops"
+   "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops",
+   "Dwell time 60 min is a declared minimum protocol time (scenario assumption; not shortenable in UI)"
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
+ },
+ {
+  "id": "Kukaklek",
+  "name": "Kukaklek (Hidden Harbor)",
+  "lat": 18.45163,
+  "lon": 77.40144,
+  "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+  "unitDescription": "Clastic delta fan unit deposited by river inflow into Jezero paleolake (USGS SIM 3464).",
+  "objective": "Sedimentary rock core with varied textures and colors of sulfate minerals, indicating possible multiple water interactions.",
+  "photo": null,
+  "photoNote": null,
+  "flags": [
+   "Stop position = last recorded rover position near the Kukaklek sample location (sample sealed sol 631 at Hidden Harbor per the NASA samples catalog; sol-629 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+   "Dwell time 60 min is a declared minimum protocol time (scenario assumption; not shortenable in UI)"
+  ],
+  "src": "https://science.nasa.gov/resource/meet-the-mars-samples-kukaklek-sample-16/"
  }
 ]

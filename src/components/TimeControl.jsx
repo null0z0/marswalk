@@ -16,9 +16,10 @@ export default function TimeControl({ windowMin, dwellMin, paceKmh, setWindowMin
             <span className="font-mono w-14 text-right">{windowMin} min</span>
           </label>
           <label className="flex items-center gap-2">Dwell/stop
-            <input type="range" min="15" max="120" step="5" value={dwellMin} onChange={e => setDwellMin(+e.target.value)} className="flex-1 accent-cyan-400" />
+            <input type="range" min="60" max="120" step="5" value={dwellMin} onChange={e => setDwellMin(Math.max(60, +e.target.value))} className="flex-1 accent-cyan-400" />
             <span className="font-mono w-14 text-right">{dwellMin} min</span>
           </label>
+          <div className="text-[9px] text-gray-500">60 min is the declared protocol minimum dwell; cannot be shortened.</div>
           <label className="flex items-center gap-2">Pace
             <input type="range" min="0.5" max="2" step="0.1" value={paceKmh} onChange={e => setPaceKmh(+e.target.value)} className="flex-1 accent-cyan-400" />
             <span className="font-mono w-14 text-right">{paceKmh.toFixed(1)} km/h</span>
