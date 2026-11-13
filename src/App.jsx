@@ -10,7 +10,7 @@ import ElevationProfile from './components/ElevationProfile.jsx';
 import { buildPlan, legMetrics } from './lib/planner.js';
 import stations from './data/stations.json';
 
-const SCIENCE = stations.filter(s => s.id !== 'Depot');
+const SCIENCE = stations.filter(s => s.id !== 'Depot' && s.lat != null);
 
 export default function App() {
   const [legsData, setLegsData] = useState(null);
@@ -18,7 +18,7 @@ export default function App() {
   const [windowMin, setWindowMin] = useState(300);
   const [dwellMin, setDwellMin] = useState(60);
   const [paceKmh, setPaceKmh] = useState(1.0);
-  const [priorities, setPriorities] = useState({ Wildcat: 1, Skinner: 2, Kodiak: 3 });
+  const [priorities, setPriorities] = useState({ Wildcat: 1, Skinner: 2 });
   const [mustHaves, setMustHaves] = useState([]);
   const [visited, setVisited] = useState([]);
   const [showGeology, setShowGeology] = useState(true);

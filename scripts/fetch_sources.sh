@@ -7,3 +7,7 @@ curl -sL -o data_raw/rover_points_full.geojson "https://raw.githubusercontent.co
 curl -sL -o data_raw/M20_waypoints_current.json "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json"
 curl -sL -o data_raw/sim3464_database.zip "https://pubs.usgs.gov/sim/3464/sim3464_database.zip"
 sha256sum -c data_raw/SHA256SUMS.txt
+
+curl -sL -o /tmp/sim3464_database.zip "https://pubs.usgs.gov/sim/3464/sim3464_database.zip"
+unzip -oq /tmp/sim3464_database.zip -d data_raw/
+echo "verify: sha256sum -c data_raw/SHA256SUMS.txt (paths adjusted)"

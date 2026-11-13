@@ -21,7 +21,7 @@ function stationIcon(s, dropped, visited) {
 function FitStations({ stations }) {
   const map = useMap();
   useEffect(() => {
-    const b = L.latLngBounds(stations.map(s => [s.lat, s.lon]));
+    const b = L.latLngBounds(stations.filter(s => s.lat != null).map(s => [s.lat, s.lon]));
     map.fitBounds(b.pad(0.3), { animate: false, maxZoom: 5 });
   }, [map, stations]);
   return null;
@@ -51,7 +51,7 @@ export default function MapView({ stations, plan, showGeology, setShowGeology, g
         <Polyline key={'drop' + id} positions={[[lastVisited.lat, lastVisited.lon], [byId[id].lat, byId[id].lon]]}
           pathOptions={{ color: '#cc3333', weight: 2, dashArray: '6 6' }} />
       ))}
-      {stations.map(s => {
+      {stations.filter(s => s.lat != null).map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
         const candidate = s.id === 'Kodiak';

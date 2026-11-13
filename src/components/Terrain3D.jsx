@@ -193,7 +193,7 @@ function Scene({ hm, stations, plan, focus, lk }) {
         <Line key={'drop' + id} points={legPoints(hm, lastVisited, byId[id])}
           color="#cc3333" lineWidth={2.5} dashed dashSize={35} gapSize={22} />
       ))}
-      {stations.map(s => {
+      {stations.filter(s => s.lat != null).map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
         return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} />;
@@ -223,12 +223,13 @@ export default function Terrain3D({ stations, plan }) {
     // Frame all four stops so Base on the floor and Kodiak up on the scarp
     // are both visible; oblique ~35 deg elevation keeps the relief readable
     // instead of flattening to a top-down map.
+    const routable = stations.filter(s => s.lat != null);
     let cx = 0, cy = 0, cz = 0;
-    for (const s of stations) {
+    for (const s of routable) {
       const p = stationPos(hm, s);
       cx += p[0]; cy += p[1]; cz += p[2];
     }
-    cx /= stations.length; cy /= stations.length; cz /= stations.length;
+    cx /= routable.length; cy /= routable.length; cz /= routable.length;
     // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
     // and scale label anchors by the same factor so screen separation is preserved
     const k = (typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1;

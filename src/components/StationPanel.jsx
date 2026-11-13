@@ -5,12 +5,14 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
       {stations.filter(s => s.id !== 'Depot').map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
+        const unroutable = s.lat == null;
         return (
           <div key={s.id} className={`p-2 rounded border text-xs transition-all duration-500 ${dropped ? 'border-red-500 bg-red-950/30' : 'border-cyan-900'}`}>
             <div className="flex items-center justify-between">
               <span className={`font-bold ${dropped ? 'line-through text-red-400' : ''}`}>{s.name}</span>
               {dropped && <span className="px-1 rounded bg-red-600 text-white text-[9px] font-bold">LOST</span>}
-              {visited
+              {unroutable && <span className="px-1 rounded bg-amber-700 text-white text-[9px] font-bold">POSITION UNAVAILABLE - NOT ROUTABLE</span>}
+              {!unroutable && (visited
                 ? <span className="text-green-400 font-mono text-[9px]">COMPLETED - SIMULATED EVA</span>
                 : <span className="flex items-center gap-1">
                     <label>Prio
@@ -19,7 +21,7 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
                       </select>
                     </label>
                     <label className="flex items-center gap-1"><input type="checkbox" checked={mustHaves.includes(s.id)} onChange={() => toggleMustHave(s.id)} />must</label>
-                  </span>}
+                  </span>)}
             </div>
             <div className="text-gray-400">{s.unit}</div>
             <details key={dropped ? 'd' : 'k'} open className="mt-1">

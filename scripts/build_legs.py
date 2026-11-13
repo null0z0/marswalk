@@ -33,7 +33,7 @@ def leg(a, b):
         prof.append([round(t * dist, 2), nearest_h(mx, my)])
     return prof
 
-ids = ['Depot', 'Wildcat', 'Skinner', 'Kodiak']
+ids = [st['id'] for st in json.load(open('src/data/stations.json')) if st['lat'] is not None]
 legs = {}
 for ai, a in enumerate(ids):
     for b in ids[ai + 1:]:
