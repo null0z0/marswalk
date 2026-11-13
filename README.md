@@ -23,9 +23,10 @@ npx vitest run   # planner unit tests (11)
 1. Base plan: Base -> Wildcat Ridge -> Skinner Ridge -> Base.
    At the declared assumptions (1.0 km/h pace, 60 min dwell per stop, 300 min
    window) the plan totals **167 min** (buffer **133**). With only two stops
-   20.96 m apart (about one 20 m DTM cell), dropping one saves almost nothing -
-   a farther third stop (shortlist under review, not chosen yet) restores a
-   real two-way tradeoff.
+   20.96 m apart (about one 20 m DTM cell), dropping one saves little distance
+   (a 21 m leg) though it still saves that stop's 60 min dwell - a farther
+   third stop (shortlist under review, not chosen yet) restores a real
+   distance-vs-science tradeoff.
 2. A +60 min overrun at the current stop makes the plan **227 min** - still
    **FITS** the 300 min window (buffer 73), and the status bar shows walked /
    science done / walk left / science left.

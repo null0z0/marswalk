@@ -10,3 +10,33 @@ Shuyak (Amalik, sample sol 575, record sol 565, 18.45073,77.40144):
     kept: [Wildcat,Shuyak] dropped: [Skinner (lowest-priority non-must-have)]
   D. +60 overrun at Wildcat (visited, dwellUsed 120), window 300, prio as A:
     route: Base -> Wildcat -> Skinner -> Depot | total 227.5 min (elapsed 142.8), dist 791.5 m, asc 3.5 m
+    kept: [Skinner] dropped: [Shuyak (lowest-priority non-must-have)]
+
+Mageik (Amalik, sample sol 619, record sol 609, 18.45364,77.39915):
+  A. window 300, prio Wildcat1 Skinner2 Mageik3, no must-haves:
+    route: Base -> Skinner -> Wildcat -> Mageik -> Depot | total 265.8 min (elapsed 0.0), dist 1429.8 m, asc 54.6 m
+    kept: [Wildcat,Skinner,Mageik] dropped: []
+  B. window 240, same priorities (planner drops lowest non-must):
+    route: Base -> Wildcat -> Skinner -> Depot | total 167.5 min (elapsed 0.0), dist 791.5 m, asc 30.3 m
+    kept: [Wildcat,Skinner] dropped: [Mageik (lowest-priority non-must-have)]
+  C. window 240, prio Wildcat1 Mageik2 Skinner3 (Skinner lowest):
+    route: Base -> Wildcat -> Mageik -> Depot | total 203.9 min (elapsed 0.0), dist 1398.7 m, asc 51.1 m
+    kept: [Wildcat,Mageik] dropped: [Skinner (lowest-priority non-must-have)]
+  D. +60 overrun at Wildcat (visited, dwellUsed 120), window 300, prio as A:
+    route: Base -> Wildcat -> Skinner -> Depot | total 227.5 min (elapsed 142.8), dist 791.5 m, asc 3.5 m
+    kept: [Skinner] dropped: [Mageik (lowest-priority non-must-have)]
+
+Kukaklek (Hidden Harbor, sample sol 631, record sol 629, 18.45163,77.40144):
+  A. window 300, prio Wildcat1 Skinner2 Kukaklek3, no must-haves:
+    route: Base -> Skinner -> Wildcat -> Kukaklek -> Depot | total 257.3 min (elapsed 0.0), dist 1288.0 m, asc 44.6 m
+    kept: [Wildcat,Skinner,Kukaklek] dropped: []
+  B. window 240, same priorities (planner drops lowest non-must):
+    route: Base -> Wildcat -> Skinner -> Depot | total 167.5 min (elapsed 0.0), dist 791.5 m, asc 30.3 m
+    kept: [Wildcat,Skinner] dropped: [Kukaklek (lowest-priority non-must-have)]
+  C. window 240, prio Wildcat1 Kukaklek2 Skinner3 (Skinner lowest):
+    route: Base -> Wildcat -> Kukaklek -> Depot | total 195.4 min (elapsed 0.0), dist 1256.9 m, asc 41.1 m
+    kept: [Wildcat,Kukaklek] dropped: [Skinner (lowest-priority non-must-have)]
+  D. +60 overrun at Wildcat (visited, dwellUsed 120), window 300, prio as A:
+    route: Base -> Wildcat -> Skinner -> Depot | total 227.5 min (elapsed 142.8), dist 791.5 m, asc 3.5 m
+    kept: [Skinner] dropped: [Kukaklek (lowest-priority non-must-have)]
+

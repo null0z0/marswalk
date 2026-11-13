@@ -1,11 +1,10 @@
 # Data provenance
 
 Every number, coordinate, elevation, image, caption and label shown as DATA in
-this app traces to one of the sources below. Status labels: **REAL DATA**
-(downloaded source), **DERIVED** (computed from REAL DATA plus a DECLARED
-ASSUMPTION), **DECLARED ASSUMPTION** (scenario input, labeled as such),
-**UNAVAILABLE** (not found in opened sources; shown as unavailable, never
-estimated).
+this app traces to one of the sources below. Status labels: **REAL DATA** (downloaded source), **DECLARED ASSUMPTION**
+(scenario input, including values computed from those assumptions and real
+geometry, labeled as such), **UNAVAILABLE** (not found in opened sources;
+shown as unavailable, never estimated).
 
 Reproduce (repo-relative, no private paths):
 
@@ -97,19 +96,19 @@ walkability assessment. The UI states this in the plan and profile captions.
 | Skinner coordinate | 18.4589, 77.40617 | REAL DATA | sol-477 drive record; last recorded position near the Swift Run / Skyland sample location | matches snapshot to 5 decimals (test) |
 | Exact sample-collection spots (Swift Run, Skyland, Hazeltop, Bearwallow) | UNAVAILABLE | UNAVAILABLE | opened sources give sample names, features and sols, and recorded rover positions - not exact equality | reported to user 2026-11-13; stations labeled "near the X sample location" |
 | Kodiak (all data) | removed | - | no numeric coordinate in opened sources | removal asserted in tests (absent from stations/legs/photos) |
-| Station elevations Base / Wildcat / Skinner | -2546.64 / -2519.85 / -2516.72 m | REAL DATA | DTM nearest cell (20 m grid) at each coordinate | independent re-sample from dtm.tif equals leg endpoints (test) |
+| Station elevations Base / Wildcat / Skinner | -2546.64 / -2519.85 / -2516.72 m | REAL DATA | DTM nearest cell (20 m grid) at each coordinate | test resamples via heightmap.json (itself verified cell-equal to the DTM crop, max diff 0.005) and matches leg endpoints |
 | Leg distances | 380.19 / 20.96 / 390.34 m (table: 380m / 21m / 390m) | REAL DATA | horizontal straight-line between waypoints; elevation samples from DTM every 10 m | every 10 m sample recomputed from dtm.tif (test); rendered table checked against legs.json (DOM check) |
 | Leg ascents | +27 / +3 / +0 m (exact 26.79 / 3.46 / 0.00 in traversal direction) | REAL DATA | sum of positive 10 m DTM steps | recomputed (test); rendered table checked (DOM check) |
 | Header "Route 0.79 km" | 791.49 m loop | REAL DATA | sum of leg distances | rendered header checked against legs.json (DOM check) |
 | Header "(0.41 left)" (overrun state) | 411.30 m remaining | REAL DATA | 20.96 + 390.34 m | computed from legs.json |
 | Header "Budget 300 min" | 5 h EVA window | DECLARED ASSUMPTION | scenario input | labeled in UI |
-| Header "Planned 167 min" (default) / "227 min" (overrun) | 47 walk + 120 dwell / +60 overrun | DERIVED | real distances x declared pace 1.0 km/h + declared dwell 60 min/stop (planner.js, unchanged) | planner vitest suite; rendered text inspected |
-| Header "Buffer 133 min" / "73 min" | 300 - 167 / 300 - 227 | DERIVED | as above | same |
+| Header "Planned 167 min" (default) / "227 min" (overrun) | 47 walk + 120 dwell / +60 overrun | DECLARED ASSUMPTION | computed by planner.js (unchanged) from real distances x declared pace 1.0 km/h + declared dwell 60 min/stop | planner vitest suite; rendered text inspected |
+| Header "Buffer 133 min" / "73 min" | 300 - 167 / 300 - 227 | DECLARED ASSUMPTION | computed as above | same |
 | Header "Objectives 2 kept" | Wildcat + Skinner retained | DECLARED ASSUMPTION | scenario configuration (priorities user-settable) | rendered text inspected |
-| Header legend "walked 0 / science done 0 / walk left 47 / science left 120 min" (default); "walked 23 / science done 120 / walk left 25 / science left 60 min" (overrun) | as shown | DERIVED | same derivation (walk = distance / declared pace; science = declared dwell; overrun adds 60 at current stop) | planner vitest suite; rendered text inspected |
-| Table times 83 / 61 / 23 min (default); 143 / 61 / 23 min (overrun) | walk 23 + dwell 60 / walk 1 + dwell 60 / walk 23 + dwell 0 | DERIVED | as above | planner vitest suite |
-| Table "(end 83)" / "(end 144)" / "(end 167)"; overrun "(done @ 1.0)" / "(end 204)" / "(end 227)" | cumulative clock | DERIVED | as above | same |
-| "Total 167 / 300 min FITS" / "227 / 300 min FITS" | as shown | DERIVED | as above | rendered text inspected |
+| Header legend "walked 0 / science done 0 / walk left 47 / science left 120 min" (default); "walked 23 / science done 120 / walk left 25 / science left 60 min" (overrun) | as shown | DECLARED ASSUMPTION | computed as above (walk = distance / declared pace; science = declared dwell; overrun adds 60 at current stop) | planner vitest suite; rendered text inspected |
+| Table times 83 / 61 / 23 min (default); 143 / 61 / 23 min (overrun) | walk 23 + dwell 60 / walk 1 + dwell 60 / walk 23 + dwell 0 | DECLARED ASSUMPTION | computed as above | planner vitest suite |
+| Table "(end 83)" / "(end 144)" / "(end 167)"; overrun "(done @ 1.0)" / "(end 204)" / "(end 227)" | cumulative clock | DECLARED ASSUMPTION | computed as above | same |
+| "Total 167 / 300 min FITS" / "227 / 300 min FITS" | as shown | DECLARED ASSUMPTION | computed as above | rendered text inspected |
 | Elevation profile x axis 0.0k-0.8k, station dots Base/Wildcat/Skinner/Base(return), profile end at 791.49 m | as plotted | REAL DATA | concatenated leg profiles | DOM check: curve endpoint at full data span, dots at cumulative leg distances (42.0/142.4/147.9/251.0 px, exact match) |
 | Elevation profile y ticks -2512 to -2549 m (domain -2550.6..-2512.4) | as plotted | REAL DATA | DTM elevation range of the route | DOM check: plotted y endpoint maps to -2546.6 m == Base DTM elevation |
 | "~21 m apart (~1 DTM cell)" note (Skinner flag + 3D label) | 20.96 m, about one 20 m DTM cell | REAL DATA | Wildcat-Skinner leg distance | recomputed (test) |

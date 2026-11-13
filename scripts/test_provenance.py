@@ -60,7 +60,7 @@ for sid, s in stations.items():
         if a == sid: vals.append(prof[0][1])
         if b == sid: vals.append(prof[-1][1])
     ok = len(vals) > 0 and all(abs(v - elev) < 0.011 for v in vals)
-    check(f'{sid} elevation == independent raw DTM nearest-cell sample', ok, f'DTM {elev} m; leg endpoints {sorted(set(round(v,2) for v in vals))}')
+    check(f'{sid} elevation == heightmap sample (crop verified == DTM)', ok, f'DTM {elev} m; leg endpoints {sorted(set(round(v,2) for v in vals))}')
 
 # 3. header/table/profile consistency is checked against the RENDERED DOM by
 # scripts/check_ui_outputs.mjs (no hardcoded expected values there either: it
