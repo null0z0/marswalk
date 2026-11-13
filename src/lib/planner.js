@@ -27,8 +27,8 @@ export function legMetrics(legsData, a, b, paceKmh) {
 }
 
 export function buildPlan(cfg) {
-  const { stops, priorities, mustHaves = [], windowMin, dwellMin, paceKmh, legsData, visited = [] } = cfg;
-  const depot = 'Depot';
+  const { stops, priorities, mustHaves = [], windowMin, dwellMin, paceKmh, legsData, visited = [], baseId = 'Depot' } = cfg;
+  const depot = baseId;
   let elapsed = 0;
   const visitedLegs = [];
   let prev = depot;
@@ -109,7 +109,7 @@ export function buildPlan(cfg) {
   const shortfall = infeasible ? sim.total - budget : 0;
   const full = simulateBest(order);
   return {
-    elapsed, budget, visitedLegs, kept, dropped, sim, full,
+    elapsed, budget, visitedLegs, kept, dropped, sim, full, baseId: depot,
     infeasible, shortfall,
     savedDist: Math.max(0, full.dist - sim.dist),
     savedAsc: Math.max(0, full.asc - sim.asc),

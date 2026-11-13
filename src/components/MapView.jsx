@@ -1,224 +1,232 @@
-import {
-  MapContainer,
-  ImageOverlay,
-  GeoJSON,
-  Polyline,
-  Tooltip,
-  Marker,
-  ZoomControl,
-  ScaleControl,
-  useMap,
-} from 'react-leaflet';
+import { MapContainer, ImageOverlay, GeoJSON, Polyline, Tooltip, Marker, CircleMarker, Rectangle, useMap } from 'react-leaflet';
 import { useEffect } from 'react';
 import L from 'leaflet';
 import 'proj4leaflet';
 
-// Same Mars equidistant-cylindrical CRS and crop bounds as the original map.
-const crs = new L.Proj.CRS(
-  'MARS:EQC',
+const crs = new L.Proj.CRS('MARS:EQC',
   '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396190 +b=3396190 +units=m +no_defs',
-  { origin: [4573663.251, 1109693.14], resolutions: [128, 64, 32, 16, 8, 4, 2] }
-);
-const BOUNDS = [
-  [18.43, 77.375],
-  [18.485, 77.44],
-];
+  { origin: [4573663.251, 1109693.14], resolutions: [128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25] });
+// proj4leaflet defaults R to Earth's 6371000 m; Mars sphere is 3396190 m, so
+// override R or the Leaflet scale bar reports Earth-radius distances (~1.88x too long).
+crs.R = 3396190;
+const BOUNDS = [[18.43, 77.375], [18.485, 77.44]];
+// Per-region basemap: url + lat/lon bounds. Gale bounds come from
+// public/layers/gale/ortho_crop_extent.json (build_gale_ortho.py).
+const ORTHO = {
+  jezero: { url: '/layers/ortho_crop.jpg', bounds: BOUNDS, maxFitZoom: 5 },
+  gale: { url: '/layers/gale/ortho_crop.jpg', bounds: [[-4.6194837, 137.4179935], [-4.5884924, 137.4499971]], maxFitZoom: 8 },
+};
 
-const CASING = { color: '#04070d', weight: 6.5, opacity: 0.6 };
+const STATION_STYLE = {
+  Wildcat: { color: '#ffb02e', shape: 'circle' },
+  Skinner: { color: '#2dd4bf', shape: 'diamond' },
+  Kukaklek: { color: '#a78bfa', shape: 'triangle' },
+  Shuyak: { color: '#f472b6', shape: 'square' },
+  Mageik: { color: '#93c5fd', shape: 'pentagon' },
+  Rocknest: { color: '#fdba74', shape: 'circle' },
+  Shaler: { color: '#bef264', shape: 'diamond' },
+  JohnKleinCumberland: { color: '#67e8f9', shape: 'square' },
+  Departure: { color: '#fca5a5', shape: 'triangle' },
+};
 
-function statusOf(id, dropped, visited, next) {
-  if (id === 'Depot') return 'base';
-  if (dropped) return 'deferred';
-  if (visited) return 'completed';
-  if (next) return 'next';
-  return 'planned';
+function stationIcon(s, dropped, visited, dim = false) {
+  const st = STATION_STYLE[s.id] || { color: '#ffb02e', shape: 'circle' };
+  const color = (s.id === 'Depot' || s.id === 'GaleBase') ? '#ffffff' : dropped ? '#884444' : visited ? '#44cc66' : st.color;
+  const shape = st.shape === 'diamond'
+    ? `width:13px;height:13px;background:${color};transform:rotate(45deg);border:2px solid #0a0e17;`
+    : st.shape === 'triangle'
+    ? `width:13px;height:13px;background:${color};clip-path:polygon(50% 0%, 0% 100%, 100% 100%);border:2px solid #0a0e17;`
+    : st.shape === 'square'
+    ? `width:12px;height:12px;background:${color};border:2px solid #0a0e17;`
+    : st.shape === 'pentagon'
+    ? `width:13px;height:13px;background:${color};clip-path:polygon(50% 0%, 100% 38%, 81% 100%, 19% 100%, 0% 38%);border:2px solid #0a0e17;`
+    : `width:13px;height:13px;border-radius:50%;background:${color};border:2px solid #0a0e17;`;
+  return L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8], html: `<div style="${dim ? 'opacity:0.25;' : ''}">${shape ? `<div style="${shape}"></div>` : ''}</div>` });
 }
 
-function stationIcon(s, status) {
-  const badge =
-    s.id === 'Depot'
-      ? ''
-      : `<span class="station-marker__badge">${s.id === 'Wildcat' ? 'W' : 'S'}</span>`;
-  const skinner = s.id === 'Skinner' ? ' station-marker--skinner' : '';
-  return L.divIcon({
-    className: 'station-marker-host',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    html: `<div class="station-marker station-marker--${status}${skinner}">
-      <span class="station-marker__ring"></span>
-      <span class="station-marker__core"></span>
-      ${badge}
-    </div>`,
-  });
-}
-
-function ViewController({ stations, resetKey }) {
+function FitStations({ stations, maxFitZoom, orthoBounds }) {
   const map = useMap();
   useEffect(() => {
-    const routable = stations.filter((s) => s.lat != null);
-    const b = L.latLngBounds(routable.map((s) => [s.lat, s.lon]));
-    map.fitBounds(b.pad(0.32), { animate: false, maxZoom: 5 });
-  }, [map, stations, resetKey]);
+    // keep the view inside real imagery: the station cluster sits near the NE
+    // corner of the Gale crop, and an unconstrained fit would frame mostly void
+    const ob = L.latLngBounds(orthoBounds);
+    map.setMaxBounds(ob.pad(0.005));
+    const b = L.latLngBounds(stations.filter(s => s.lat != null).map(s => [s.lat, s.lon]));
+    map.fitBounds(b.pad(0.3), { animate: false, maxZoom: maxFitZoom });
+  }, [map, stations, maxFitZoom, orthoBounds]);
   return null;
 }
 
-export default function MapView({ stations, plan, showGeology, geojson, resetKey }) {
-  const byId = Object.fromEntries(stations.map((s) => [s.id, s]));
-  const droppedIds = plan.dropped.map((d) => d.id);
-  const visitedIds = plan.visitedLegs.map((l) => l.to);
-  const lastVisited = visitedIds.length
-    ? byId[visitedIds[visitedIds.length - 1]]
-    : byId.Depot;
-  const nextId = plan.sim.legs.find((l) => l.to !== 'Depot')?.to || null;
+function ScaleControl() {
+  const map = useMap();
+  useEffect(() => {
+    const sc = L.control.scale({ imperial: false, metric: true, position: 'bottomleft' });
+    sc.addTo(map);
+    return () => { sc.remove(); };
+  }, [map]);
+  return null;
+}
 
-  const neighbor = (leg) => ({
-    from: [byId[leg.from].lat, byId[leg.from].lon],
-    to: [byId[leg.to].lat, byId[leg.to].lon],
-  });
+const OVERLAY_LAYERS = (region) => {
+  const dir = region === 'gale' ? '/layers/gale' : '/layers';
+  const base = [
+    { key: 'elevRamp', label: 'Elevation colors', url: `${dir}/elev_ramp.png` },
+    { key: 'hillshade', label: 'Hillshade relief', url: `${dir}/hillshade.png` },
+    { key: 'slope', label: 'Slope shading', url: `${dir}/slope.png` },
+  ];
+  return base;
+};
+
+export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null }) {
+  const ortho = ORTHO[region] || ORTHO.jezero;
+  const byId = Object.fromEntries(stations.map(s => [s.id, s]));
+  const droppedIds = plan.dropped.map(d => d.id);
+  const visitedIds = plan.visitedLegs.map(l => l.to);
+  const routePts = [];
+  for (const leg of plan.visitedLegs.concat(plan.sim.legs)) {
+    routePts.push([byId[leg.from].lat, byId[leg.from].lon], [byId[leg.to].lat, byId[leg.to].lon]);
+  }
+  const base = stations.find(s => s.id === baseId) || stations[0];
+  const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : base;
+  const toggle = (k) => setLayers(prev => ({ ...prev, [k]: !prev[k] }));
 
   return (
-    <MapContainer
-      crs={crs}
-      center={[18.458, 77.408]}
-      zoom={5}
-      minZoom={3}
-      maxZoom={5}
-      zoomControl={false}
-      doubleClickZoom={false}
-      scrollWheelZoom
-      className="map-view"
-    >
-      <ViewController stations={stations} resetKey={resetKey} />
-      <ZoomControl position="topleft" />
-      <ScaleControl position="bottomright" imperial={false} maxWidth={90} />
-
-      <ImageOverlay url="/layers/ortho_crop.jpg" bounds={BOUNDS} opacity={1} />
-
-      {showGeology && geojson && (
-        <GeoJSON
-          key="geo"
-          data={geojson}
-          style={() => ({ color: '#7cc4ff', weight: 1.6, fillOpacity: 0.07 })}
-          onEachFeature={(f, layer) =>
-            layer.bindPopup(`<b>${f.properties.name}</b> (${f.properties.symbol})`)
-          }
-        />
-      )}
-
-      {/* Deferred spurs sit under the live route so the decision reads clearly. */}
-      {droppedIds.map((id) => {
-        const seg = [
-          [lastVisited.lat, lastVisited.lon],
-          [byId[id].lat, byId[id].lon],
-        ];
-        return (
-          <Polyline
-            key={`drop-casing-${id}`}
-            positions={seg}
-            pathOptions={{ ...CASING, weight: 5 }}
-            interactive={false}
-          />
-        );
-      })}
-      {droppedIds.map((id) => (
-        <Polyline
-          key={`drop-${id}`}
-          positions={[
-            [lastVisited.lat, lastVisited.lon],
-            [byId[id].lat, byId[id].lon],
-          ]}
-          pathOptions={{
-            color: '#f87171',
-            weight: 2,
-            dashArray: '5 6',
-            opacity: 0.9,
-          }}
-        />
-      ))}
-
-      {/* Completed legs */}
-      {plan.visitedLegs.map((leg, i) => {
-        const p = neighbor(leg);
-        return (
-          <Polyline
-            key={`done-casing-${i}`}
-            positions={[p.from, p.to]}
-            pathOptions={{ ...CASING }}
-            interactive={false}
-          />
-        );
-      })}
-      {plan.visitedLegs.map((leg, i) => {
-        const p = neighbor(leg);
-        return (
-          <Polyline
-            key={`done-${i}`}
-            positions={[p.from, p.to]}
-            pathOptions={{ color: '#34d399', weight: 3 }}
-            className="route-completed"
-          />
-        );
-      })}
-
-      {/* Remaining traverse, including the return leg */}
-      {plan.sim.legs.map((leg, i) => {
-        const p = neighbor(leg);
-        return (
-          <Polyline
-            key={`plan-casing-${i}`}
-            positions={[p.from, p.to]}
-            pathOptions={{ ...CASING }}
-            interactive={false}
-          />
-        );
-      })}
-      {plan.sim.legs.map((leg, i) => {
-        const p = neighbor(leg);
-        const isReturn = leg.to === 'Depot';
-        return (
-          <Polyline
-            key={`plan-${i}`}
-            positions={[p.from, p.to]}
-            pathOptions={{
-              color: isReturn ? '#94a3b8' : '#22d3ee',
-              weight: isReturn ? 2.5 : 3,
-              dashArray: isReturn ? '7 6' : undefined,
-              opacity: isReturn ? 0.85 : 1,
-            }}
-            className={isReturn ? undefined : 'route-planned'}
-          />
-        );
-      })}
-
-      {stations
-        .filter((s) => s.lat != null)
-        .map((s) => {
+    <div className="relative h-full w-full">
+      <MapContainer crs={crs} center={[(ortho.bounds[0][0] + ortho.bounds[1][0]) / 2, (ortho.bounds[0][1] + ortho.bounds[1][1]) / 2]} zoom={5} maxZoom={9} doubleClickZoom={false}
+        style={{ height: '100%', width: '100%', background: '#0a0e17' }}>
+        <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} />
+        <ScaleControl />
+        <ImageOverlay key={region} url={ortho.url} bounds={ortho.bounds} opacity={1} />
+        {/* honest coverage boundary: outside this rectangle there is no imagery */}
+        <Rectangle bounds={ortho.bounds} pathOptions={{ color: '#8a8f98', weight: 1, dashArray: '4 6', fill: false, opacity: 0.6 }}
+          eventHandlers={{}}>
+          <Tooltip sticky className="station-label">Imagery coverage limit - no ortho data outside this frame</Tooltip>
+        </Rectangle>
+        {terrainMeta && OVERLAY_LAYERS(region).map(ol => layers[ol.key] && (
+          <ImageOverlay key={ol.key} url={ol.url} bounds={terrainMeta.bounds} opacity={layers.overlayOpacity} />
+        ))}
+        {region === 'gale' && layers.crismVna && (
+          <ImageOverlay key="crismvna" url="/layers/gale/crism_vna.png" bounds={ortho.bounds} opacity={layers.overlayOpacity} />
+        )}
+        {layers.contours && contours && (
+          <GeoJSON key="contours" data={contours}
+            style={() => ({ color: '#e5e7eb', weight: 0.7, opacity: 0.7 })}
+            onEachFeature={(f, l) => l.bindTooltip(`${f.properties.elev} m`, { sticky: true })} />
+        )}
+        {layers.geology && geojson && (
+          <GeoJSON key="geo" data={geojson}
+            style={() => ({ color: '#7cc4ff', weight: 1.75, fillOpacity: 0.07 })}
+            onEachFeature={(f, l) => l.bindPopup(`<b>${f.properties.name}</b> (${f.properties.symbol})`)} />
+        )}
+        {layers.roverRoute && roverTrack && roverTrack.route && (
+          <Polyline positions={roverTrack.route.filter(p => solLimit == null || p[2] <= solLimit).map(p => [p[0], p[1]])}
+            pathOptions={{ color: '#f97316', weight: 2, dashArray: '2 5', opacity: 0.9 }} />
+        )}
+        {layers.roverRoute && roverTrack && roverTrack.segments && roverTrack.segments.map((seg, i) => (
+          <Polyline key={'seg' + i} positions={seg}
+            pathOptions={{ color: '#f97316', weight: 2, opacity: 0.85 }} />
+        ))}
+        {layers.roverStops && roverTrack && roverTrack.stops.filter(st => solLimit == null || st.solFirst <= solLimit).map(st => (
+          <CircleMarker key={'rs' + st.site} center={[st.lat, st.lon]} radius={4}
+            pathOptions={{ color: '#f97316', weight: 1.5, fillColor: '#f97316', fillOpacity: 0.35 }}>
+            <Tooltip direction="top" offset={[0, -4]} className="station-label">
+              Recorded rover site {st.site} - sols {st.solFirst}-{st.solLast}
+            </Tooltip>
+          </CircleMarker>
+        ))}
+        {routePts.length > 1 && <Polyline positions={routePts} pathOptions={{ color: '#22d3ee', weight: 3 }} />}
+        {droppedIds.map(id => (
+          <Polyline key={'drop' + id} positions={[[lastVisited.lat, lastVisited.lon], [byId[id].lat, byId[id].lon]]}
+            pathOptions={{ color: '#cc3333', weight: 2, dashArray: '6 6' }} />
+        ))}
+        {stations.filter(s => s.lat != null).map(s => {
           const dropped = droppedIds.includes(s.id);
           const visited = visitedIds.includes(s.id);
-          const status = statusOf(s.id, dropped, visited, nextId === s.id);
-          const dir = s.id === 'Skinner' ? 'left' : 'right';
-          const off = s.id === 'Skinner' ? [-10, 0] : [10, 0];
-          const name = s.id === 'Depot' ? 'Base' : s.name;
+          // Per-station label placement so labels never cover each other at fit bounds
+          // (Skinner/Wildcat sit ~21 m apart; Kukaklek sits just NW of Base).
+          const LABEL_PLACEMENT = {
+            Skinner: ['top', [0, -8]],
+            Wildcat: ['right', [10, 0]],
+            Kukaklek: ['left', [-10, 0]],
+            Depot: ['right', [10, 0]],
+            Shuyak: ['left', [-10, 0]],
+            Mageik: ['top', [0, -8]],
+            GaleBase: ['bottom', [0, 10]],
+            Rocknest: ['left', [-10, 0]],
+            Shaler: ['bottom', [0, 10]],
+            JohnKleinCumberland: ['top', [0, -8]],
+            Departure: ['right', [10, 0]],
+          };
+          const [dir, off] = LABEL_PLACEMENT[s.id] || ['right', [10, 0]];
           return (
-            <Marker
-              key={s.id}
-              position={[s.lat, s.lon]}
-              icon={stationIcon(s, status)}
-              title={name}
-              keyboard
-            >
-              <Tooltip
-                permanent
-                direction={dir}
-                offset={off}
-                className={`station-label station-label--${status}`}
-              >
-                {name}
-                {dropped ? ' · deferred' : ''}
+            <Marker key={s.id} position={[s.lat, s.lon]} icon={stationIcon(s, dropped, visited, solLimit != null && s.sol != null && s.sol > solLimit)} opacity={solLimit != null && s.sol != null && s.sol > solLimit ? 0.35 : 1}>
+              <Tooltip permanent direction={dir} offset={off} className="station-label">
+                {s.id === baseId ? 'Base' : (s.short || s.name.split(' ')[0])}{dropped ? ' — LOST' : ''}
               </Tooltip>
             </Marker>
           );
         })}
-    </MapContainer>
+      </MapContainer>
+
+      {/* Layers panel */}
+      <details className="absolute top-2 left-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[240px] shadow-lg">
+        <summary className="cursor-pointer font-bold text-cyan-400 select-none">Layers</summary>
+        <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
+          {region === 'jezero' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} /> USGS geology (SIM 3464)</label>}
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} /> {roverTrack && roverTrack.segments ? 'NASA recorded traverse geometry' : 'Recorded rover positions (connected)'}</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} /> Recorded rover stops</label>
+          {region === 'gale' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} /> CRISM 770 nm reflectance (19 m/px browse, JHU/APL 2012 - brightness only, NOT a mineral map; cropped with an integer-pixel window-edge match, so small spatial offsets up to about one 19 m source pixel are possible)</label>}
+          {terrainMeta && <div className="pt-1 border-t border-gray-800 text-gray-500">Derived from the elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - views of the same data, not independent measurements:</div>}
+          {terrainMeta && OVERLAY_LAYERS(region).map(ol => (
+            <label key={ol.key} className="flex items-center gap-1.5"><input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} /> {ol.label}</label>
+          ))}
+          {terrainMeta && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} /> Contours{terrainMeta ? ` (${terrainMeta.contourIntervalM} m)` : ''}</label>}
+          {terrainMeta && <label className="flex items-center gap-1.5 pt-1 border-t border-gray-800">
+            Overlay opacity
+            <input type="range" min="0.15" max="0.9" step="0.05" value={layers.overlayOpacity}
+              onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value }))} className="w-20" />
+          </label>}
+          {terrainMeta && (
+            <div className="pt-1 border-t border-gray-800 text-[9px] text-gray-500 space-y-0.5">
+              <div>Elevation {terrainMeta.elevMin} to {terrainMeta.elevMax} m (viridis ramp)</div>
+              <div>Slope 0 to {terrainMeta.slopeMaxDeg}&deg; at {terrainMeta.gridM} m grid - steepness display, not a safety rating</div>
+              <div>Contours every {terrainMeta.contourIntervalM} m</div>
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* Collapsible legend & sources link (closed by default on mobile) */}
+      <details className="absolute bottom-2 right-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[210px] shadow-lg">
+        <summary className="cursor-pointer font-bold text-cyan-400 select-none">Legend & Data</summary>
+        <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
+          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#22d3ee]"></span> Planned traverse</div>
+          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#cc3333]"></span> Deferred / dropped leg</div>
+          {region === 'gale'
+            ? <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#f97316]"></span> NASA recorded traverse geometry (MSL MMGIS drive polylines)</div>
+            : <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#f97316]"></span> Recorded rover positions, connected (NASA snapshot 2022-12-23; not the measured driven path)</div>}
+          <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-[#f97316] bg-[#f97316]/40"></span> Recorded rover stop</div>
+          <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-white border border-black"></span> {region === 'gale' ? 'Declared scenario start (no real installation)' : 'Base habitat (depot)'}</div>
+          {stations.filter(s => s.id !== 'Depot' && s.lat != null).map(s => {
+            const st = STATION_STYLE[s.id] || { color: '#ffb02e' };
+            return (
+              <div key={s.id} className="flex items-center gap-1.5">
+                <span className="w-2 h-2" style={{ background: st.color }}></span> {s.short || s.name.split('(')[0].trim()}
+              </div>
+            );
+          })}
+          {region === 'gale' && <div className="pt-1 border-t border-gray-800 text-[9px] text-gray-500">Stop names are informal MSL mission names; a bounded search of the USGS Gazetteer (2026-11-13) found no IAU-approved names for these stops.</div>}
+          <div className="pt-1 border-t border-gray-800 text-[9px] space-y-0.5">
+            {region === 'gale' ? (<>
+              <div><a href="https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Gale DEM (USGS MSL mosaic 1 m v3)</a></div>
+              <div><a href="https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json" target="_blank" rel="noreferrer" className="text-cyan-400 underline">MSL waypoint records (NASA MMGIS)</a></div>
+              <div><a href="http://crism.jhuapl.edu/msl_landing_sites/index_news.php" target="_blank" rel="noreferrer" className="text-cyan-400 underline">CRISM Gale mosaic (JHU/APL)</a></div>
+            </>) : (
+              <a href="https://pubs.usgs.gov/publication/sim3464" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Data sources (USGS & NASA)</a>
+            )}
+          </div>
+        </div>
+      </details>
+    </div>
   );
 }

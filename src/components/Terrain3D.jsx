@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import proj4 from 'proj4';
-import { Canvas, useLoader, useThree } from '@react-three/fiber';
+import { Canvas, useLoader } from '@react-three/fiber';
 import { OrbitControls, Line, Html } from '@react-three/drei';
-import { ResetIcon } from './Icons.jsx';
 
 // Same Mars equidistant-cylindrical CRS as the 2D map (MapView.jsx).
-const EQC =
-  '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396190 +b=3396190 +units=m +no_defs';
+const EQC = '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396190 +b=3396190 +units=m +no_defs';
 
 // Display-only vertical exaggeration so the delta-front relief is legible.
 // Labeled on screen; horizontal scale and DTM values are unmodified.
@@ -20,33 +18,43 @@ const LABEL_OFFSET = {
   Depot: [0, 150, 0],
   Wildcat: [-280, 190, 150],
   Skinner: [280, 300, -150],
+  // Gale Yellowknife Bay cluster: all stops sit within ~150 m, so offsets
+  // stay small but staggered in height/azimuth to keep plates apart.
+  GaleBase: [0, 60, 0],
+  Rocknest: [-150, 110, 40],
+  JohnKleinCumberland: [110, 190, -20],
+  Shaler: [-150, 130, -110],
+  Departure: [140, 380, 90],
 };
-// Narrow (portrait) containers: wider world offsets so the screen-space labels
-// of the two ridges (~20 m apart in reality) do not collide.
+// Mobile (lk > 1): wider world offsets so the screen-space labels of the two
+// ridges (~20 m apart in reality) do not collide; desktop offsets unchanged.
 const LABEL_OFFSET_MOBILE = {
   Depot: [-180, 200, 0],
   Wildcat: [-450, 430, 240],
   Skinner: [450, 560, -240],
+  GaleBase: [0, 60, 0],
+  Rocknest: [-160, 170, 40],
+  JohnKleinCumberland: [160, 260, -30],
+  Shaler: [-130, 350, -90],
+  Departure: [130, 440, 90],
 };
 
 function markerColor(s, dropped, visited) {
-  if (s.id === 'Depot') return '#ffffff';
-  if (dropped) return '#f87171';
-  if (visited) return '#34d399';
+  if (s.id === 'Depot' || s.id === 'GaleBase') return '#ffffff';
+  if (dropped) return '#cc3333';
+  if (visited) return '#44cc66';
   if (s.id === 'Skinner') return '#2dd4bf';
   return '#ffb02e';
 }
 
-function Terrain({ hm }) {
-  const texture = useLoader(THREE.TextureLoader, '/layers/ortho_3d.jpg');
+function Terrain({ hm, region }) {
+  const texture = useLoader(THREE.TextureLoader, region === 'gale' ? '/layers/gale/ortho_3d.jpg' : '/layers/ortho_3d.jpg');
   const geometry = useMemo(() => {
     const { nx, ny, dx, min } = hm;
     const pos = new Float32Array(nx * ny * 3);
     const uv = new Float32Array(nx * ny * 2);
-    const W = (nx - 1) * dx,
-      H = (ny - 1) * dx;
-    let p = 0,
-      q = 0;
+    const W = (nx - 1) * dx, H = (ny - 1) * dx;
+    let p = 0, q = 0;
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
         const v = hm.values[j][i];
@@ -60,10 +68,7 @@ function Terrain({ hm }) {
     const idx = [];
     for (let j = 0; j < ny - 1; j++) {
       for (let i = 0; i < nx - 1; i++) {
-        const a = j * nx + i,
-          b = a + 1,
-          c = a + nx,
-          d = c + 1;
+        const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
         idx.push(a, c, b, b, c, d);
       }
     }
@@ -88,31 +93,25 @@ function Terrain({ hm }) {
 }
 
 // Terrain height (world Y) at an EQC-meter point, interpolated on the exact
-// rendered triangle surface (same (a,c,b)/(b,c,d) split as the mesh above),
+// rendered triangle surface (same (a,c,b)/(b,c,d) split as the mesh below),
 // so draped lines lie on the mesh, not on a differing bilinear surface.
 function terrainY(hm, mx, my) {
   const { x0, y0, dx, nx, ny, min, values } = hm;
   const fx = Math.max(0, Math.min(nx - 1.001, (mx - x0) / dx));
   const fy = Math.max(0, Math.min(ny - 1.001, (y0 - my) / dx));
-  const i = Math.floor(fx),
-    j = Math.floor(fy);
-  const tx = fx - i,
-    ty = fy - j;
-  const v00 = values[j][i],
-    v10 = values[j][i + 1];
-  const v01 = values[j + 1][i],
-    v11 = values[j + 1][i + 1];
-  const v =
-    tx + ty <= 1
-      ? v00 + (v10 - v00) * tx + (v01 - v00) * ty
-      : v11 + (v01 - v11) * (1 - tx) + (v10 - v11) * (1 - ty);
+  const i = Math.floor(fx), j = Math.floor(fy);
+  const tx = fx - i, ty = fy - j;
+  const v00 = values[j][i], v10 = values[j][i + 1];
+  const v01 = values[j + 1][i], v11 = values[j + 1][i + 1];
+  const v = (tx + ty <= 1)
+    ? v00 + (v10 - v00) * tx + (v01 - v00) * ty
+    : v11 + (v01 - v11) * (1 - tx) + (v10 - v11) * (1 - ty);
   return (v - min) * VE;
 }
 
 function worldXY(hm, mx, my) {
-  const W = (hm.nx - 1) * hm.dx,
-    H = (hm.ny - 1) * hm.dx;
-  return [mx - hm.x0 - W / 2, hm.y0 - my - H / 2];
+  const W = (hm.nx - 1) * hm.dx, H = (hm.ny - 1) * hm.dx;
+  return [(mx - hm.x0) - W / 2, (hm.y0 - my) - H / 2];
 }
 
 function stationPos(hm, s) {
@@ -131,41 +130,36 @@ function legPoints(hm, a, b) {
   const pts = [];
   for (let k = 0; k <= n; k++) {
     const t = k / n;
-    const mx = ax + (bx - ax) * t,
-      my = ay + (by - ay) * t;
+    const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t;
     const [x, z] = worldXY(hm, mx, my);
     pts.push([x, terrainY(hm, mx, my) + 1.5, z]);
   }
   return pts;
 }
 
-function StationMarker({ hm, s, dropped, visited, lk }) {
+function StationMarker({ hm, s, dropped, visited, lk, ms = 1 }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
-  const name = s.id === 'Depot' ? 'Base' : s.name;
-  const label = name + (dropped ? ' · deferred' : '');
+  // Short map labels only; caveats/disclaimers live in the left panel card.
+  const name = (s.id === 'Depot' || s.id === 'GaleBase') ? 'Base' : (s.short || s.name);
+  const label = name + (dropped ? ' - LOST' : '');
   const base = (lk > 1 && LABEL_OFFSET_MOBILE[s.id]) || LABEL_OFFSET[s.id] || [0, 150, 0];
-  const off = base.map((v) => v * lk);
+  const off = base.map(v => v * lk);
   return (
     <group position={[x, y, z]}>
       {/* thin neutral stem so it never reads as part of the cyan route */}
-      <mesh position={[0, 45, 0]}>
-        <cylinderGeometry args={[1.5, 1.5, 90, 6]} />
+      <mesh position={[0, 45 * ms, 0]}>
+        <cylinderGeometry args={[1.5 * ms, 1.5 * ms, 90 * ms, 6]} />
         <meshBasicMaterial color="#94a3b8" transparent opacity={0.45} />
       </mesh>
-      <mesh position={[0, 95, 0]}>
-        <sphereGeometry args={[20, 16, 16]} />
+      <mesh position={[0, 95 * ms, 0]}>
+        <sphereGeometry args={[20 * ms, 16, 16]} />
         <meshBasicMaterial color={color} />
       </mesh>
-      <Line points={[[0, 100, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
-      <Html
-        position={off}
-        zIndexRange={[40, 0]}
-        style={{
-          pointerEvents: 'none',
-          transform: 'translate(-50%, calc(-100% - 10px))',
-        }}
-      >
+      <Line points={[[0, 100 * ms, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
+      {/* Screen-space label: constant size at any zoom, light text with a
+          thick dark outline so it stays readable over bright or dark terrain. */}
+      <Html position={off} zIndexRange={[40, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, calc(-100% - 10px))' }}>
         <div className="terrain3d-label">
           <span className="terrain3d-dot" style={{ background: color }} />
           {label}
@@ -175,264 +169,118 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   );
 }
 
-// Wildcat and Skinner are ~20.96 m apart (about one 20 m DTM cell), so their
-// markers nearly touch at these scales; a small note keeps that from reading
-// as a rendering error. Positions stay true.
-function SepNote({ hm, a, b }) {
-  const pa = stationPos(hm, a),
-    pb = stationPos(hm, b);
+// Wildcat and Skinner are 20.96 m apart (about one 20 m DTM cell), so their markers nearly touch at
+// these scales; a small note on the leader lines keeps that from reading as
+// a rendering error. Positions stay true.
+function SepNote({ hm, a, b, lk }) {
+  const pa = stationPos(hm, a), pb = stationPos(hm, b);
   const mid = [(pa[0] + pb[0]) / 2, Math.max(pa[1], pb[1]) + 160, (pa[2] + pb[2]) / 2];
   return (
-    <Html
-      position={mid}
-      zIndexRange={[30, 0]}
-      style={{ pointerEvents: 'none', transform: 'translate(-50%, -50%)' }}
-    >
+    <Html position={mid} zIndexRange={[30, 0]} style={{ pointerEvents: 'none', transform: lk > 1 ? 'translate(calc(-50% + 35px), -50%)' : 'translate(-50%, -50%)' }}>
       <div className="terrain3d-sep">~21 m apart (~1 DTM cell)</div>
     </Html>
   );
 }
 
-function RouteLeg({ hm, a, b, color, dashed, dashedSize = 18, gapSize = 12 }) {
-  const points = useMemo(() => legPoints(hm, a, b), [hm, a, b]);
-  return (
-    <>
-      <Line points={points} color={color} lineWidth={7} transparent opacity={0.16} />
-      <Line
-        points={points}
-        color={color}
-        lineWidth={2.5}
-        dashed={dashed}
-        dashSize={dashedSize}
-        gapSize={gapSize}
-      />
-    </>
-  );
-}
-
-function CameraReset({ camPos, focus, resetToken }) {
-  const { camera, controls } = useThree();
-  useEffect(() => {
-    camera.position.set(camPos[0], camPos[1], camPos[2]);
-    if (controls && controls.target) {
-      controls.target.set(focus[0], focus[1], focus[2]);
-      controls.update();
-    }
-    camera.updateProjectionMatrix();
-    // Recenter on load, when the container reflows, or on an explicit reset.
-  }, [resetToken, camPos[0], camPos[1], camPos[2], focus[0], focus[1], focus[2], camera, controls]);
-  return null;
-}
-
-function Scene({ hm, stations, plan, focus, camPos, lk, resetToken }) {
-  const byId = Object.fromEntries(stations.map((s) => [s.id, s]));
-  const droppedIds = plan.dropped.map((d) => d.id);
-  const visitedIds = plan.visitedLegs.map((l) => l.to);
-  const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : byId.Depot;
+function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
+  const byId = Object.fromEntries(stations.map(s => [s.id, s]));
+  const droppedIds = plan.dropped.map(d => d.id);
+  const visitedIds = plan.visitedLegs.map(l => l.to);
+  const legs = plan.visitedLegs.concat(plan.sim.legs);
+  // Marker size scales with route spread so fixed-size spheres don't
+  // swallow a compact cluster (Gale ~150 m across vs Jezero ~700 m).
+  let spread = 0;
+  const pos = {};
+  for (const s of stations) if (s.lat != null) pos[s.id] = stationPos(hm, s);
+  const ids = Object.keys(pos);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = pos[ids[i]], c = pos[ids[j]];
+    spread = Math.max(spread, Math.hypot(a[0] - c[0], a[2] - c[2]));
+  }
+  const ms = Math.min(1, Math.max(0.15, spread / 700));
+  const baseId = (plan.sim.legs[0] && plan.sim.legs[0].from) || 'Depot';
+  const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : byId[baseId];
 
   return (
     <>
-      <CameraReset camPos={camPos} focus={focus} resetToken={resetToken} />
-      <ambientLight intensity={0.45} />
-      <hemisphereLight args={['#bfe6ff', '#3a1c0e', 0.35]} />
+      <ambientLight intensity={0.4} />
       <directionalLight position={[-3200, 2100, -900]} intensity={2.1} />
-      <Terrain hm={hm} />
-
-      {plan.visitedLegs.map((leg, k) => (
-        <RouteLeg
-          key={`done-${k}`}
-          hm={hm}
-          a={byId[leg.from]}
-          b={byId[leg.to]}
-          color="#34d399"
-        />
+      <Terrain hm={hm} region={region} />
+      {legs.map((leg, k) => (
+        <Line key={'leg' + k} points={legPoints(hm, byId[leg.from], byId[leg.to])}
+          color="#22d3ee" lineWidth={2.5}
+          dashed={leg.to === baseId && k > 0} dashSize={18} gapSize={12} />
       ))}
-      {plan.sim.legs.map((leg, k) => (
-        <RouteLeg
-          key={`plan-${k}`}
-          hm={hm}
-          a={byId[leg.from]}
-          b={byId[leg.to]}
-          color={leg.to === 'Depot' ? '#94a3b8' : '#22d3ee'}
-          dashed={leg.to === 'Depot'}
-        />
+      {droppedIds.map(id => (
+        <Line key={'drop' + id} points={legPoints(hm, lastVisited, byId[id])}
+          color="#cc3333" lineWidth={2.5} dashed dashSize={35} gapSize={22} />
       ))}
-      {droppedIds.map((id) => (
-        <RouteLeg
-          key={`drop-${id}`}
-          hm={hm}
-          a={lastVisited}
-          b={byId[id]}
-          color="#f87171"
-          dashed
-          dashedSize={35}
-          gapSize={22}
-        />
-      ))}
-
-      {stations
-        .filter((s) => s.lat != null)
-        .map((s) => {
-          const dropped = droppedIds.includes(s.id);
-          const visited = visitedIds.includes(s.id);
-          return (
-            <StationMarker
-              key={s.id}
-              hm={hm}
-              s={s}
-              dropped={dropped}
-              visited={visited}
-              lk={lk}
-            />
-          );
-        })}
-
-      <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} />
-
-      <OrbitControls
-        makeDefault
-        target={focus}
-        maxPolarAngle={1.45}
-        minDistance={150}
-        maxDistance={12000}
-        enableDamping
-        dampingFactor={0.08}
-      />
+      {stations.filter(s => s.lat != null).map(s => {
+        const dropped = droppedIds.includes(s.id);
+        const visited = visitedIds.includes(s.id);
+        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} ms={ms} />;
+      })}
+      {byId.Wildcat && byId.Skinner && <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />}
+      <OrbitControls makeDefault target={focus}
+        maxPolarAngle={1.45} minDistance={minDist} maxDistance={12000}
+        enableDamping dampingFactor={0.08} />
     </>
   );
 }
 
-function useContainerPortrait(ref) {
-  const [portrait, setPortrait] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) setPortrait(height > width * 1.05);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref]);
-  return portrait;
-}
-
-export default function Terrain3D({ stations, plan, resetKey = 0 }) {
+export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot' }) {
   const [hm, setHm] = useState(null);
-  const [localReset, setLocalReset] = useState(0);
-  const shellRef = useRef(null);
-  const portrait = useContainerPortrait(shellRef);
-
   useEffect(() => {
-    fetch('/data/heightmap.json')
-      .then((r) => r.json())
-      .then((d) => {
-        let min = Infinity;
-        for (const row of d.values) for (const v of row) if (v !== null && v < min) min = v;
-        setHm({ ...d, min });
-      });
-  }, []);
+    setHm(null);
+    fetch(region === 'gale' ? '/data/heightmap_gale.json' : '/data/heightmap.json').then(r => r.json()).then(d => {
+      let min = Infinity;
+      for (const row of d.values) for (const v of row) if (v !== null && v < min) min = v;
+      setHm({ ...d, min });
+    });
+  }, [region]);
 
-  // Default framing centers on the route stops (Wildcat, Skinner) so the
-  // traverse fills the view, not the middle of the whole crop.
-  const { camPos, focus, k } = useMemo(() => {
-    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1 };
-    // Frame all stops so Base on the floor and the ridge stops are both
-    // visible; oblique ~35 deg elevation keeps the relief readable.
-    const routable = stations.filter((s) => s.lat != null);
-    let cx = 0,
-      cy = 0,
-      cz = 0;
+  // Default framing centers on the route stops (Wildcat, Skinner) so
+  // the traverse fills the view, not the middle of the whole crop.
+  const { camPos, focus, k, minDist } = useMemo(() => {
+    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1, minDist: 150 };
+    // Frame all stops so Base on the floor and the ridge stops
+    // are both visible; oblique ~35 deg elevation keeps the relief readable
+    // instead of flattening to a top-down map.
+    const routable = stations.filter(s => s.lat != null);
+    let cx = 0, cy = 0, cz = 0;
     for (const s of routable) {
       const p = stationPos(hm, s);
-      cx += p[0];
-      cy += p[1];
-      cz += p[2];
+      cx += p[0]; cy += p[1]; cz += p[2];
     }
-    cx /= routable.length;
-    cy /= routable.length;
-    cz /= routable.length;
-    // Narrow containers see a thinner horizontal slice — pull back, and scale
-    // label anchors by the same factor so screen separation is preserved.
-    const kk = portrait ? 1.55 : 1;
-    return {
-      camPos: [cx + 1700 * kk, cy + 1000 * kk, cz + 600 * kk],
-      focus: [cx, cy + 20, cz],
-      k: kk,
-    };
-  }, [hm, stations, portrait]);
+    cx /= routable.length; cy /= routable.length; cz /= routable.length;
+    // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
+    // and scale label anchors by the same factor so screen separation is preserved
+    let spread = 0;
+    for (let i = 0; i < routable.length; i++) for (let j = i + 1; j < routable.length; j++) {
+      const a = stationPos(hm, routable[i]), c = stationPos(hm, routable[j]);
+      spread = Math.max(spread, Math.hypot(a[0] - c[0], a[2] - c[2]));
+    }
+    // Camera distance scales with the route spread so a compact cluster
+    // (Gale, ~150 m across) fills the view like the Jezero traverse does.
+    const camK = Math.min(1, Math.max(0.12, (spread * 2.4) / 1977));
+    const k = ((typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1) * Math.max(0.15, camK);
+    return { camPos: [cx + 1700 * k, cy + 1000 * k, cz + 600 * k], focus: [cx, cy + 20 * camK, cz], k, minDist: Math.max(40, 150 * camK) };
+  }, [hm, stations]);
 
-  const resetToken = resetKey + localReset;
+  if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">{region === 'gale' ? 'Loading 3D terrain (USGS Gale DEM 1 m, decimated to 2 m)...' : 'Loading 3D terrain (USGS 20m DTM)...'}</div>;
 
   return (
-    <div className="terrain-shell" ref={shellRef}>
-      {!hm ? (
-        <div className="terrain-loading" role="status">
-          Loading 3D terrain (USGS 20 m DTM)…
-        </div>
-      ) : (
-        <Canvas
-          camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
-          style={{ background: 'transparent' }}
-          dpr={[1, 1.5]}
-        >
-          <Scene
-            hm={hm}
-            stations={stations}
-            plan={plan}
-            focus={focus}
-            camPos={camPos}
-            lk={k}
-            resetToken={resetToken}
-          />
-        </Canvas>
-      )}
-
-      <div className="terrain-hud">
-        <b>3D TERRAIN · 20 m DTM</b>
-        Vertical exaggeration ×{VE} (display only). Not a navigational surface.
-        <br />
-        Texture: CTX ortho (grayscale).
+    <div className="relative h-full w-full">
+      <Canvas camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
+        style={{ background: '#0a0e17' }} dpr={[1, 1.5]}>
+        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} region={region} minDist={minDist} />
+      </Canvas>
+      <div className="absolute bottom-1 left-1 z-[1000] pointer-events-none bg-[#0d1420cc] border border-cyan-900 rounded px-2 py-1 text-[9px] leading-tight text-gray-300 max-w-[260px]">
+        {region === 'gale'
+          ? '3D Terrain: Visual representation of the 2 m grid decimated from the USGS MSL Gale DEM Mosaic 1 m v3. Not a navigational surface.'
+          : '3D Terrain: Visual representation of 20m DTM grid. Not a navigational surface.'}
+        <br />Vertical exaggeration x{VE} (display only). Texture: {region === 'gale' ? 'HiRISE LRGB ortho (grayscale).' : 'CTX ortho (grayscale).'}
       </div>
-
-      <div className="terrain-controls">
-        <button
-          type="button"
-          className="tool-toggle"
-          onClick={() => setLocalReset((r) => r + 1)}
-        >
-          <ResetIcon />
-          <span>Reset view</span>
-        </button>
-        <div className="segmented" aria-hidden="true">
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '0 8px',
-              color: '#34d399',
-              fontSize: 11,
-            }}
-          >
-            <i className="swatch" style={{ background: '#34d399' }} /> completed
-          </span>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '0 8px',
-              color: '#a5f3fc',
-              fontSize: 11,
-            }}
-          >
-            <i className="swatch" style={{ background: '#22d3ee' }} /> planned
-          </span>
-        </div>
-      </div>
-
-      <div className="terrain-hint">Drag to orbit · scroll to zoom</div>
     </div>
   );
 }

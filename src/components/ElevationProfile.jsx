@@ -1,154 +1,121 @@
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceDot,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { TerrainIcon } from './Icons.jsx';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceDot, ResponsiveContainer } from 'recharts';
+import stationsData from '../data/stations.json';
+const SHORT = Object.fromEntries(stationsData.map(x => [x.id, x.short || (x.id === 'Depot' ? 'Base' : x.name.split(' ')[0])]));
 
-export default function ElevationProfile({ plan, stations }) {
+export default function ElevationProfile({ plan, stations, legsData }) {
   const data = [];
-  const stationMarks = [{ d: 0, e: null, id: 'Depot' }];
+  const baseId = plan.baseId || 'Depot';
+  const stationMarks = [{ d: 0, e: null, id: baseId }];
+  const routeLegs = plan.visitedLegs.concat(plan.sim.legs);
   let off = 0;
-  let completedDist = 0;
-
-  for (const leg of plan.visitedLegs.concat(plan.sim.legs)) {
+  for (const leg of routeLegs) {
     for (const p of leg.metrics.profile) data.push({ d: +(off + p[0]).toFixed(1), e: p[1] });
     off += leg.metrics.dist;
     stationMarks.push({ d: +off.toFixed(1), e: data[data.length - 1].e, id: leg.to });
   }
-  for (const leg of plan.visitedLegs) completedDist += leg.metrics.dist;
   stationMarks[0].e = data.length ? data[0].e : 0;
+  const totalDist = off;
 
-  const elevations = data.map((p) => p.e);
-  const minElev = elevations.length ? Math.min(...elevations) : 0;
-  const maxElev = elevations.length ? Math.max(...elevations) : 0;
-  const totalAsc =
-    plan.visitedLegs.reduce((a, l) => a + l.metrics.asc, 0) + plan.sim.asc;
+  // Data-driven geology strip + slope ranges from legs.json legsMeta (SIM 3464 polygons, 20 m DTM).
+  const meta = legsData && legsData.legsMeta ? legsData.legsMeta : {};
+  const UNIT_STYLE = {
+    Njf: { cls: 'bg-sky-950/70 text-sky-300', label: 'Njf (Jezero floor unit)' },
+    NHjf2: { cls: 'bg-indigo-950/70 text-indigo-300', label: 'NHjf2 (Jezero fan unit 2)' },
+  };
+  const nm = id => (id === baseId ? 'Base' : (SHORT[id] || id));
+  const segs = [];
+  const legSlopeNotes = [];
+  let goff = 0;
+  for (const leg of routeLegs) {
+    const fwd = meta[leg.from + '|' + leg.to];
+    const rev = !fwd ? meta[leg.to + '|' + leg.from] : null;
+    const m = fwd || rev;
+    const dist = leg.metrics.dist;
+    const slopeKey = m ? Object.keys(m).find(k => /^slope\d+_deg$/.test(k)) : null;
+    const base = slopeKey ? parseInt(slopeKey.slice(5, slopeKey.indexOf('_')), 10) : 20;
+    if (m && slopeKey && m[slopeKey] && dist >= base) {
+      // slopes are stored for the stored leg direction; negate+swap when traversed in reverse
+      const sr = rev ? [-m[slopeKey][1], -m[slopeKey][0]] : m[slopeKey];
+      legSlopeNotes.push(`${nm(leg.from)} → ${nm(leg.to)}: ${sr[0].toFixed(1)}° to ${sr[1].toFixed(1)}° (${base} m baseline, bilinear)`);
+    }
+    if (m && m.geology) {
+      const g = rev
+        ? m.geology.map(s => [dist - s[1], dist - s[0], s[2], s[3]]).reverse()
+        : m.geology;
+      for (const s of g) segs.push({ start: goff + s[0], end: goff + s[1], symbol: s[2], name: s[3] });
+    }
+    goff += dist;
+  }
+  const merged = [];
+  for (const s of segs) {
+    const last = merged[merged.length - 1];
+    if (last && last.symbol === s.symbol && Math.abs(last.end - s.start) < 1) last.end = s.end;
+    else merged.push({ ...s });
+  }
+
+  const maxD = data.length ? data[data.length - 1].d : 0;
+  // Sub-km routes (Gale is ~160 m) read in meters; km ticks would collapse to duplicates.
+  const xTick = maxD < 1000 ? (v => `${Math.round(v)} m`) : (v => `${(v / 1000).toFixed(1)}k`);
 
   return (
-    <section className="panel elevation-panel" aria-labelledby="elevation-heading">
-      <div className="panel-head">
-        <div>
-          <div className="eyebrow">
-            <TerrainIcon />
-            Terrain profile
-          </div>
-          <h2 id="elevation-heading" className="panel-title">
-            Active route elevation
-          </h2>
-        </div>
-        <span className="chip chip--mars">20 m DTM</span>
-      </div>
+    <div className="p-2 bg-[#101826] rounded border border-cyan-900">
+      <h3 className="text-[11px] uppercase tracking-wider text-cyan-400 mb-1">Elevation profile (active route)</h3>
+      <ResponsiveContainer width="100%" height={140}>
+        <LineChart data={data} margin={{ top: 14, right: 34, bottom: 0, left: -18 }}>
+          <XAxis type="number" dataKey="d" domain={[0, 'dataMax']} tickFormatter={xTick} tick={{ fontSize: 9, fill: '#789' }} />
+          <YAxis type="number" domain={['dataMin - 4', 'dataMax + 4']} tick={{ fontSize: 9, fill: '#789' }} tickFormatter={v => v.toFixed(0)} />
+          <Tooltip formatter={(v) => [v.toFixed(1) + ' m', 'elev']} labelFormatter={v => `${(+v).toFixed(0)} m`} />
+          <Line type="monotone" dataKey="e" stroke="#4aa8ff" dot={false} strokeWidth={1.5} isAnimationActive={false} />
+          {stationMarks.map((m, i) => {
+            const pos = m.id === 'Wildcat' || m.id === 'Departure' || m.id === 'Rocknest' ? 'bottom' : 'top';
+            const name = m.id === baseId ? (i === 0 ? 'Base' : 'Base (return)') : (SHORT[m.id] || m.id);
+            return <ReferenceDot key={i} x={m.d} y={m.e} r={3} fill="#ffb02e" stroke="none"
+              label={{ value: name, fontSize: 8, fill: '#ffb02e', position: pos, offset: 4 }} />;
+          })}
+        </LineChart>
+      </ResponsiveContainer>
 
-      <div className="panel-body">
-        <div className="chart-stats">
-          <span>
-            Range <b>{minElev.toFixed(0)}</b> to <b>{maxElev.toFixed(0)} m</b>
-          </span>
-          <span>
-            Ascent <b>+{totalAsc.toFixed(0)} m</b>
-          </span>
-          <span>
-            Distance <b>{(off / 1000).toFixed(2)} km</b>
-          </span>
+      {/* Geology strip under profile (Jezero only - no polygon-scale geology map found for the Gale window) */}
+      {merged.length > 0 && (
+      <div className="mt-2 pt-1 border-t border-gray-800">
+        <div className="text-[9px] uppercase tracking-wider text-gray-400 mb-0.5">Geology strip along route (USGS SIM 3464)</div>
+        <div className="flex h-3.5 w-full rounded overflow-hidden" role="img" aria-label="geology strip along route">
+          {merged.map((s, i) => {
+            const st = UNIT_STYLE[s.symbol] || { cls: 'bg-gray-800 text-gray-300', label: s.symbol };
+            const w = totalDist > 0 ? ((s.end - s.start) / totalDist) * 100 : 0;
+            return (
+              <div key={i} className={`${st.cls} h-full`} style={{ width: `${w}%` }} title={`${st.label}${s.name ? ' - ' + s.name : ''} (${(s.start / 1000).toFixed(2)}-${(s.end / 1000).toFixed(2)} km)`} />
+            );
+          })}
         </div>
-
-        {data.length === 0 ? (
-          <p className="plan-footnote">
-            No active traverse for this window. Increase the EVA window or change the route
-            assumptions.
-          </p>
-        ) : (
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={data}
-              margin={{ top: 16, right: 38, bottom: 0, left: -14 }}
-              aria-label="Elevation profile of the active traverse"
-            >
-              <CartesianGrid strokeDasharray="3 4" vertical={false} />
-              <XAxis
-                type="number"
-                dataKey="d"
-                domain={[0, 'dataMax']}
-                tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
-                tick={{ fontSize: 10, fill: '#7a8da5' }}
-                tickMargin={6}
-                stroke="rgba(148,197,255,0.18)"
-              />
-              <YAxis
-                type="number"
-                domain={['dataMin - 4', 'dataMax + 4']}
-                tick={{ fontSize: 10, fill: '#7a8da5' }}
-                tickFormatter={(v) => v.toFixed(0)}
-                width={46}
-                stroke="rgba(148,197,255,0.18)"
-              />
-              <Tooltip
-                contentStyle={{
-                  background: 'rgba(5,10,18,0.95)',
-                  border: '1px solid rgba(148,197,255,0.24)',
-                  borderRadius: 7,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                  color: '#c1cfe0',
-                }}
-                labelStyle={{ color: '#93a7bf' }}
-                formatter={(v) => [`${v.toFixed(1)} m`, 'elevation']}
-                labelFormatter={(v) => `${(+v).toFixed(0)} m along route`}
-              />
-              <Line
-                type="monotone"
-                dataKey="e"
-                stroke="#22d3ee"
-                dot={false}
-                strokeWidth={2}
-                isAnimationActive={false}
-              />
-              {completedDist > 0 && (
-                <ReferenceLine
-                  x={completedDist}
-                  stroke="rgba(52,211,153,0.55)"
-                  strokeDasharray="3 4"
-                  label={{
-                    value: 'now',
-                    position: 'insideTopRight',
-                    fontSize: 9,
-                    fill: '#6ee7b7',
-                  }}
-                />
-              )}
-              {stationMarks.map((m, i) => {
-                const pos = m.id === 'Wildcat' ? 'bottom' : 'top';
-                const name = m.id === 'Depot' ? (i === 0 ? 'Base' : 'Base (return)') : m.id;
-                return (
-                  <ReferenceDot
-                    key={`${m.id}-${i}`}
-                    x={m.d}
-                    y={m.e}
-                    r={3.5}
-                    fill="#fbbf24"
-                    stroke="#05080f"
-                    strokeWidth={1.5}
-                    label={{ value: name, fontSize: 10, fill: '#fcd34d', position: pos, offset: 5 }}
-                  />
-                );
-              })}
-            </LineChart>
-          </ResponsiveContainer>
+        {/* Wrapped legend so unit names are never truncated inside narrow segments */}
+        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[8px] font-mono leading-tight">
+          {merged.map((s, i) => {
+            const st = UNIT_STYLE[s.symbol] || { cls: 'bg-gray-800 text-gray-300', label: s.symbol };
+            return (
+              <span key={i} className="inline-flex items-center gap-1 whitespace-normal">
+                <span className={`${st.cls} inline-block w-2.5 h-2 rounded-sm shrink-0`}></span>
+                <span className="text-gray-400">{st.label} {(s.start / 1000).toFixed(2)}-{(s.end / 1000).toFixed(2)} km</span>
+              </span>
+            );
+          })}
+        </div>
+        {legSlopeNotes.length > 0 && (
+          <div className="text-[9px] text-gray-500 mt-1">
+            Slope per leg (grid baseline): {legSlopeNotes.join('; ')}
           </div>
         )}
-
-        <p className="plan-footnote">
-          Precomputed straight-segment samples from the 20 m DTM grid; not a surveyed path.
-        </p>
       </div>
-    </section>
+      )}
+      {merged.length === 0 && legSlopeNotes.length > 0 && (
+        <div className="mt-2 pt-1 border-t border-gray-800 text-[9px] text-gray-500">
+          Slope per leg (grid baseline): {legSlopeNotes.join('; ')}
+        </div>
+      )}
+
+      <div className="mt-1.5 text-[9px] text-gray-500 break-all">
+        Precomputed straight-segment samples from the {legsData && legsData.dtm ? legsData.dtm : 'elevation grid'}; slopes are grid-baseline bilinear estimates and the grid smooths micro-relief.{merged.length > 0 ? ' Mapped unit contacts are regional-map boundaries (SIM 3464), not scarp markers.' : ''} Not a surveyed walking path.
+      </div>
+    </div>
   );
 }

@@ -1,143 +1,68 @@
-import { AlertIcon, TargetIcon } from './Icons.jsx';
+import stations from '../data/stations.json';
+const SHORT = Object.fromEntries(stations.map(x => [x.id, x.short || (x.id === 'Depot' ? 'Base' : x.name.split(' ')[0])]));
+const nm = id => id === undefined ? '' : (SHORT[id] || id);
 
-export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, visited = [] }) {
+export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNote = 'elevation grid', planA = null, onPinA = null, onClearA = null }) {
+  const routeLegs = plan.visitedLegs.concat(plan.sim.legs);
+  const routeKm = routeLegs.reduce((a, l) => a + l.metrics.dist, 0) / 1000;
+  const routeAsc = routeLegs.reduce((a, l) => a + l.metrics.asc, 0);
   const total = plan.elapsed + plan.sim.total;
   const fits = total <= windowMin;
-  const nm = (id) => (id === 'Depot' ? 'Base' : id);
   const objTotal = plan.visitedLegs.length + plan.kept.length + plan.dropped.length;
-  const savedMin = Math.max(0, Math.round(plan.full.total - plan.sim.total));
   let clock = 0;
-
   return (
-    <section className="panel plan-panel" aria-labelledby="plan-heading">
-      <div className="panel-head">
-        <div>
-          <div className="eyebrow">
-            <TargetIcon />
-            Mission plan
-          </div>
-          <h2 id="plan-heading" className="panel-title">
-            Traverse manifest
-          </h2>
-          <p className="panel-sub">
-            {plan.visitedLegs.length + plan.kept.length} of {objTotal} objectives retained ·
-            shortest-time ordering
-          </p>
+    <div className="p-3 bg-[#101826] rounded border border-cyan-900 text-xs">
+      <h3 className="text-[11px] uppercase tracking-wider text-cyan-400 mb-1">Plan</h3>
+      {plan.dropped.length > 0 && (
+        <div className="mb-2 p-2 bg-[#0d1420] border border-cyan-400 rounded">
+          <div className="font-bold text-cyan-300">MISSION DECISION: {plan.dropped.map(d => d.name).join(', ')} deferred</div>
+          <div>{plan.visitedLegs.length + plan.kept.length} of {objTotal} objectives retained</div>
+          <div>Lost: {plan.dropped.map(d => d.objective).join('; ')}</div>
+          <div className="mt-1">Dropping {plan.dropped.map(d => d.name).join(', ')} saves <b>{Math.max(0, Math.round(plan.full.total - plan.sim.total))} min</b> ({Math.round(plan.elapsed + plan.full.total)} min with every objective vs {Math.round(plan.elapsed + plan.sim.total)} min now).</div>
         </div>
-        <span className={`chip ${fits ? 'chip--green' : 'chip--red'}`}>
-          <span className="chip-dot" aria-hidden="true" />
-          {fits ? 'Fits' : 'Over budget'}
-        </span>
-      </div>
-
-      <div className="panel-body">
-        <div className="plan-table-wrap">
-          <table className="plan-table">
-            <caption className="sr-only">
-              Planned traverse legs with distance, ascent and elapsed time
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Leg</th>
-                <th scope="col">Dist</th>
-                <th scope="col">Asc</th>
-                <th scope="col">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plan.visitedLegs.map((l, i) => {
-                const overrunMin = visited[i]?.overrunMin ?? 0;
-                clock += l.walkMin + l.dwellUsed;
-                return (
-                  <tr key={`v${i}`}>
-                    <td>
-                      <span className="leg-status leg-status--done" aria-hidden="true" />
-                      {nm(l.from)} → {nm(l.to)}
-                    </td>
-                    <td className="num">{l.metrics.dist.toFixed(0)}m</td>
-                    <td className="num">+{l.metrics.asc.toFixed(0)}m</td>
-                    <td className="num">
-                      {(l.walkMin + l.dwellUsed).toFixed(0)} min
-                      <span className="row-sub">
-                        done @ {l.paceUsed.toFixed(1)} km/h
-                        {overrunMin > 0 ? ` · +${Math.round(overrunMin)} min overrun` : ''}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {plan.sim.legs.map((l, i) => {
-                const dwellPart = l.to === 'Depot' ? 0 : dwellMin;
-                clock += l.metrics.minutes + dwellPart;
-                const isReturn = l.to === 'Depot';
-                return (
-                  <tr key={`s${i}`}>
-                    <td>
-                      <span
-                        className={`leg-status ${isReturn ? 'leg-status--return' : 'leg-status--planned'}`}
-                        aria-hidden="true"
-                      />
-                      {nm(l.from)} → {nm(l.to)}
-                    </td>
-                    <td className="num">{l.metrics.dist.toFixed(0)}m</td>
-                    <td className="num">+{l.metrics.asc.toFixed(0)}m</td>
-                    <td className="num">
-                      {(l.metrics.minutes + dwellPart).toFixed(0)} min
-                      <span className="row-sub">end {Math.round(clock)}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      )}
+      <table className="w-full font-mono text-[10px]">
+        <thead><tr className="text-gray-500"><th className="text-left pr-2">Leg</th><th className="px-2">Dist</th><th className="px-2">Asc</th><th className="pl-3">Time</th></tr></thead>
+        <tbody>
+          {plan.visitedLegs.map((l, i) => {
+            clock += l.walkMin + l.dwellUsed;
+            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(done @ {l.paceUsed.toFixed(1)})</div></td></tr>;
+          })}
+          {plan.sim.legs.map((l, i) => {
+            const dwellPart = l.to === (plan.baseId || 'Depot') ? 0 : dwellMin;
+            clock += l.metrics.minutes + dwellPart;
+            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(end {Math.round(clock)})</div></td></tr>;
+          })}
+        </tbody>
+      </table>
+      <div className="mt-1 font-mono">Total <b>{Math.round(total)}</b> / {Math.round(windowMin)} min {fits ? <span className="text-green-400 font-bold">FITS</span> : <span className="text-red-400 font-bold">DOES NOT FIT</span>}</div>
+      {plan.dropped.length > 0 && (
+        <div className="mt-1 text-red-400">
+          Deferred ({plan.dropped[0].reason}): <b>{plan.dropped.map(d => d.name).join(', ')}</b> - objective lost this EVA: <i>{plan.dropped.map(d => d.objective).join('; ')}</i>
+          <div className="text-gray-400">vs full plan: {Math.max(0, plan.savedDist).toFixed(0)} m and {Math.max(0, plan.savedAsc).toFixed(0)} m ascent not walked; deferred objectives could be a later sol.</div>
         </div>
-
-        <div className="plan-total">
-          <span>
-            Total <b>{Math.round(total)}</b> / {Math.round(windowMin)} min
-          </span>
-          <span className={`plan-fits ${fits ? 'plan-fits--yes' : 'plan-fits--no'}`}>
-            {fits ? 'FITS' : 'DOES NOT FIT'}
-          </span>
+      )}
+      {plan.infeasible && <div className="mt-1 text-red-400 font-bold">INFEASIBLE: must-have stations exceed the remaining window by {Math.round(plan.shortfall)} min. Increase the window or change assumptions - no station was silently dropped.</div>}
+      {onPinA && (
+        <div className="mt-2 pt-1 border-t border-cyan-900">
+          {!planA ? (
+            <button onClick={onPinA} className="px-2 py-0.5 bg-[#0d1420] border border-cyan-900 rounded text-cyan-300 text-[10px]">Pin as Plan A (compare)</button>
+          ) : (
+            <div className="text-[10px] font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-400 font-bold">A/B compare</span>
+                <button onClick={onClearA} className="text-gray-500 underline">clear A</button>
+              </div>
+              <div>A: {Math.round(planA.total)} min, {planA.km.toFixed(2)} km, +{Math.round(planA.asc)} m ascent, {planA.kept} objectives kept{planA.dropped.length ? ` (${planA.dropped.join(', ')} deferred)` : ''}</div>
+              <div>B (current): {Math.round(total)} min, {routeKm.toFixed(2)} km, +{Math.round(routeAsc)} m ascent, {plan.visitedLegs.length + plan.kept.length} objectives kept{plan.dropped.length ? ` (${plan.dropped.map(d => SHORT[d.id] || d.name).join(', ')} deferred)` : ''}</div>
+              <div className={total <= planA.total ? 'text-green-400' : 'text-amber-400'}>
+                {total === planA.total ? 'Same total time' : `B is ${Math.abs(Math.round(total - planA.total))} min ${total < planA.total ? 'faster' : 'slower'} than A`}
+              </div>
+            </div>
+          )}
         </div>
-
-        {plan.dropped.length > 0 && (
-          <p className="plan-footnote">
-            <strong>Deferred:</strong> {plan.dropped.map((d) => d.name).join(', ')} —{' '}
-            {plan.dropped[0].reason}. Recovers <strong>{savedMin} min</strong> and avoids{' '}
-            <strong>{Math.max(0, plan.savedDist).toFixed(0)} m</strong> /{' '}
-            <strong>{Math.max(0, plan.savedAsc).toFixed(0)} m</strong> ascent. The objective can
-            be revisited on a later sol.
-          </p>
-        )}
-
-        {plan.infeasible && (
-          <div className="control-alert" role="alert">
-            <AlertIcon />
-            <span>
-              <b>Infeasible:</b> must-have stations exceed the remaining window by{' '}
-              {Math.round(plan.shortfall)} min. No station was silently dropped. Increase the
-              window or change assumptions.
-            </span>
-          </div>
-        )}
-
-        <details className="disclosure mt-2">
-          <summary>Geometry &amp; assumptions</summary>
-          <div className="disclosure-body">
-            <p>
-              Times use the declared {paceKmh.toFixed(1)} km/h pace on horizontal straight-line
-              distance between waypoints (geometric, waypoint-derived). Heights and ascent come
-              from the 20 m DTM (nearest-cell samples every 10 m along each straight segment;
-              not a surveyed path; 20 m is grid spacing, not a vertical-accuracy guarantee).
-            </p>
-            <p>
-              Geometry only — this is not a human-safety or walkability assessment. Dwell of{' '}
-              {dwellMin} min per kept stop is a declared scenario assumption.
-            </p>
-          </div>
-        </details>
-      </div>
-    </section>
+      )}
+      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on horizontal straight-line distance between waypoints (geometric, waypoint-derived); heights and ascent from the {dtmNote}; grid spacing is not a vertical-accuracy guarantee; geometry only - no human-safety or walkability claim.</div>
+    </div>
   );
 }
