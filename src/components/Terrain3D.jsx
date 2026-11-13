@@ -120,8 +120,9 @@ function legPoints(hm, a, b) {
 function StationMarker({ hm, s, dropped, visited, lk }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
-  const name = s.id === 'Depot' ? 'Base' : s.name;
-  const label = name + (s.id === 'Kodiak' ? ' (candidate - not verified)' : '') + (dropped ? ' - LOST' : '');
+  // Short map labels only; caveats/disclaimers live in the left panel card.
+  const name = s.id === 'Depot' ? 'Base' : s.id === 'Kodiak' ? 'Kodiak (Candidate)' : s.name;
+  const label = name + (dropped ? ' - LOST' : '');
   const off = (LABEL_OFFSET[s.id] || [0, 150, 0]).map(v => v * lk);
   return (
     <group position={[x, y, z]}>
@@ -143,6 +144,19 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
         </div>
       </Html>
     </group>
+  );
+}
+
+// Wildcat and Skinner are ~20 m apart, so their markers nearly touch at
+// these scales; a small note on the leader lines keeps that from reading as
+// a rendering error. Positions stay true.
+function SepNote({ hm, a, b }) {
+  const pa = stationPos(hm, a), pb = stationPos(hm, b);
+  const mid = [(pa[0] + pb[0]) / 2, Math.max(pa[1], pb[1]) + 100, (pa[2] + pb[2]) / 2];
+  return (
+    <Html position={mid} zIndexRange={[30, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, -50%)' }}>
+      <div className="terrain3d-sep">~20 m apart</div>
+    </Html>
   );
 }
 
@@ -171,6 +185,7 @@ function Scene({ hm, stations, plan, focus, lk }) {
         const visited = visitedIds.includes(s.id);
         return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} />;
       })}
+      <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} />
       <OrbitControls makeDefault target={focus}
         maxPolarAngle={1.45} minDistance={150} maxDistance={12000}
         enableDamping dampingFactor={0.08} />
@@ -192,17 +207,19 @@ export default function Terrain3D({ stations, plan }) {
   // the traverse fills the view, not the middle of the whole crop.
   const { camPos, focus, k } = useMemo(() => {
     if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1 };
-    const routeStops = stations.filter(s => s.id !== 'Depot');
+    // Frame all four stops so Base on the floor and Kodiak up on the scarp
+    // are both visible; oblique ~35 deg elevation keeps the relief readable
+    // instead of flattening to a top-down map.
     let cx = 0, cy = 0, cz = 0;
-    for (const s of routeStops) {
+    for (const s of stations) {
       const p = stationPos(hm, s);
       cx += p[0]; cy += p[1]; cz += p[2];
     }
-    cx /= routeStops.length; cy /= routeStops.length; cz /= routeStops.length;
+    cx /= stations.length; cy /= stations.length; cz /= stations.length;
     // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
     // and scale label anchors by the same factor so screen separation is preserved
     const k = (typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1;
-    return { camPos: [cx + 300 * k, cy + 1500 * k, cz + 1150 * k], focus: [cx, cy + 20, cz + 60], k };
+    return { camPos: [cx + 300 * k, cy + 950 * k, cz + 1400 * k], focus: [cx, cy + 20, cz], k };
   }, [hm, stations]);
 
   if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">Loading 3D terrain (USGS 20m DTM)...</div>;

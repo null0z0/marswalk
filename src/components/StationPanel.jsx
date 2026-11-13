@@ -24,11 +24,13 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
             <div className="text-gray-400">{s.unit}</div>
             <details key={dropped ? 'd' : 'k'} open className="mt-1">
               <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats, photo</summary>
-              <div className={`mt-1 transition-all duration-500 ${dropped ? 'line-through' : ''}`}>{s.objective}</div>
+              <div className={`mt-1 transition-all duration-500 ${dropped ? 'line-through' : ''}`}>
+                {(() => { const [first, ...rest] = s.objective.split(/(?<=\.)\s+/); return <><b className="text-gray-200">{first}</b>{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}
+              </div>
               {s.flags.map(f => <div key={f} className="text-amber-400 text-[10px]">⚠ {f}</div>)}
               {dropped && <div className="text-red-400 font-bold mt-1">LOST this EVA - lowest-priority non-must-have. You will not see this:</div>}
               <img src={s.photo} alt={s.name} className={`mt-1 rounded w-full transition-all duration-700 ${dropped ? 'grayscale opacity-50' : ''}`} />
-              <div className="text-[9px] text-gray-500 mt-1">{s.photoNote}{s.src ? ` Source: ${s.src}` : ''}</div>
+              <div className="text-[9px] text-gray-500 mt-1">{s.photoNote}{s.src && <> <a href={s.src} target="_blank" rel="noreferrer" className="text-gray-500 underline break-all">source</a></>}</div>
             </details>
           </div>
         );

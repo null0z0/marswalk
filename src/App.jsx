@@ -70,6 +70,7 @@ export default function App() {
           <TimeControl windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh}
             setWindowMin={setWindowMin} setDwellMin={setDwellMin} setPaceKmh={setPaceKmh}
             overrunLeft={overrunLeft}
+            overrunApplied={visited.length > 0 && !!visited[visited.length - 1].overrun}
             onOverrun={() => {
               const order = SCIENCE.filter(s => !visited.find(v => v.id === s.id)).sort((a, b) => priorities[a.id] - priorities[b.id]);
               if (!order.length) return;
@@ -78,9 +79,10 @@ export default function App() {
                 const m = legMetrics(legsData, prevId, order[0].id, paceKmh);
                 // freeze history: walk minutes and pace used are recorded now;
                 // later pace-slider moves must not rewrite completed legs
-                return [...v, { id: order[0].id, dwellUsed: dwellMin + 60, walkMin: m.minutes, paceUsed: paceKmh }];
+                return [...v, { id: order[0].id, dwellUsed: dwellMin + 60, walkMin: m.minutes, paceUsed: paceKmh, overrun: true }];
               });
             }}
+            onUndoOverrun={() => setVisited(v => (v.length && v[v.length - 1].overrun) ? v.slice(0, -1) : v)}
             onReset={() => setVisited([])} />
           <PlanSummary plan={plan} windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh} />
           <ElevationProfile plan={plan} stations={stations} />

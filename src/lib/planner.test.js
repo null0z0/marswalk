@@ -75,3 +75,22 @@ describe('planner decision loop (display rounding 268/32/308/8/208/248)', () => 
     expect(fast.elapsed).toBeCloseTo(slow.elapsed, 6);
   });
 });
+
+describe('distance invariant: leg table sum == header total == profile end', () => {
+  const tableSum = p => p.visitedLegs.concat(p.sim.legs).reduce((a, l) => a + l.metrics.dist, 0);
+  const headerTotal = p => p.visitedLegs.reduce((a, l) => a + l.metrics.dist, 0) + p.sim.dist;
+  const profileEnd = p => p.visitedLegs.concat(p.sim.legs).reduce((a, l) => a + l.metrics.dist, 0);
+  it('default plan: legs, header and profile agree', () => {
+    const r = buildPlan({ ...BASE, visited: [] });
+    expect(tableSum(r)).toBeCloseTo(headerTotal(r), 6);
+    expect(profileEnd(r)).toBeCloseTo(headerTotal(r), 6);
+  });
+  it('overrun LOST scenario (Kodiak dropped): 381.4 + 20.7 + 390.5 = 792.6 m, header shows 0.79 km', () => {
+    const w = legMetrics(legsData, 'Depot', 'Wildcat', 1.0).minutes;
+    const r = buildPlan({ ...BASE, visited: [{ id: 'Wildcat', dwellUsed: 100, walkMin: w, paceUsed: 1.0 }] });
+    expect(r.dropped.map(d => d.id)).toEqual(['Kodiak']);
+    expect(tableSum(r)).toBeCloseTo(headerTotal(r), 6);
+    expect(headerTotal(r)).toBeCloseTo(792.6, 1);
+    expect((headerTotal(r) / 1000).toFixed(2)).toBe('0.79');
+  });
+});
