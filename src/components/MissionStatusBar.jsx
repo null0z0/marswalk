@@ -39,4 +39,4 @@ export default function MissionStatusBar({ plan, windowMin }) {
       </div>
     </div>
   );
-      }
+}

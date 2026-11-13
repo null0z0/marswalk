@@ -1,0 +1,20 @@
+{
+ "wildcat": {
+  "sol": 502,
+  "imageid": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
+  "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00502/ids/edr/browse/zcam/ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ01_1200.jpg",
+  "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. Mastcam-Z is a pair of cameras located high on the rover's mast.\n\nThis image was acquired on July 19, 2022 (Sol 502)"
+ },
+ "skinner": {
+  "sol": 477,
+  "imageid": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
+  "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00477/ids/edr/browse/zcam/ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ01_1200.jpg",
+  "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. This image was acquired on June 23, 2022 (Sol 477)."
+ },
+ "kodiak": {
+  "sol": 275,
+  "imageid": "ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ",
+  "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00275/ids/edr/browse/zcam/ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ02_1200.jpg",
+  "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. This image was acquired on May 26, 2021 (Sol 275)."
+ }
+}

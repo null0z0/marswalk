@@ -114,4 +114,4 @@ export function buildPlan(cfg) {
     savedDist: Math.max(0, full.dist - sim.dist),
     savedAsc: Math.max(0, full.asc - sim.asc),
   };
-    }
+}
