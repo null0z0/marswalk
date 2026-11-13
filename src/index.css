@@ -14,4 +14,4 @@
   text-shadow:2px 0 0 #060a12,-2px 0 0 #060a12,0 2px 0 #060a12,0 -2px 0 #060a12,2px 2px 0 #060a12,-2px -2px 0 #060a12,2px -2px 0 #060a12,-2px 2px 0 #060a12}
 .terrain3d-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #060a12;flex:none}
 
-@media (max-width:767px){.terrain3d-label{white-space:normal;max-width:300px;line-height:1.25;text-align:center;font-size:11px}}
+@media (max-width:767px){.terrain3d-label{white-space:normal;width:max-content;max-width:230px;line-height:1.25;text-align:center;font-size:11px}}
