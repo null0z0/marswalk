@@ -23,7 +23,7 @@
   "photo": "/img/wildcat.jpg",
   "photoNote": "ZCAM photo at Wildcat outcrop, sol 502 (historical rover imagery).",
   "flags": [
-   "Rover-documented outcrop (site 26); stop position from approximate rover parked coordinates, not a surveyed station"
+   "Rover-documented outcrop; stop position from approximate rover parked coordinates, not a surveyed station"
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
  },

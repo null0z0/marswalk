@@ -20,12 +20,12 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
         <tbody>
           {plan.visitedLegs.map((l, i) => {
             clock += l.walkMin + l.dwellUsed;
-            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap">{(l.walkMin + l.dwellUsed).toFixed(0)} min (done @ {l.paceUsed.toFixed(1)})</td></tr>;
+            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3"><div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div><div className="text-gray-500">(done @ {l.paceUsed.toFixed(1)})</div></td></tr>;
           })}
           {plan.sim.legs.map((l, i) => {
             const dwellPart = l.to === 'Depot' ? 0 : dwellMin;
             clock += l.metrics.minutes + dwellPart;
-            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap">{(l.metrics.minutes + dwellPart).toFixed(0)} min (end {Math.round(clock)})</td></tr>;
+            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3"><div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div><div className="text-gray-500">(end {Math.round(clock)})</div></td></tr>;
           })}
         </tbody>
       </table>

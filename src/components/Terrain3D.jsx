@@ -18,7 +18,7 @@ const LABEL_OFFSET = {
   Depot: [0, 150, 0],
   Wildcat: [-160, 130, 100],
   Skinner: [160, 210, -100],
-  Kodiak: [0, 170, 0],
+  Kodiak: [0, 240, 0],
 };
 
 function markerColor(s, dropped, visited) {
@@ -117,12 +117,12 @@ function legPoints(hm, a, b) {
   return pts;
 }
 
-function StationMarker({ hm, s, dropped, visited }) {
+function StationMarker({ hm, s, dropped, visited, lk }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
   const name = s.id === 'Depot' ? 'Base' : s.name;
   const label = name + (s.id === 'Kodiak' ? ' (candidate - not verified)' : '') + (dropped ? ' - LOST' : '');
-  const off = LABEL_OFFSET[s.id] || [0, 150, 0];
+  const off = (LABEL_OFFSET[s.id] || [0, 150, 0]).map(v => v * lk);
   return (
     <group position={[x, y, z]}>
       <mesh position={[0, 45, 0]}>
@@ -133,12 +133,10 @@ function StationMarker({ hm, s, dropped, visited }) {
         <sphereGeometry args={[20, 16, 16]} />
         <meshBasicMaterial color={color} />
       </mesh>
-      {(off[0] !== 0 || off[2] !== 0) && (
-        <Line points={[[0, 100, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
-      )}
+      <Line points={[[0, 100, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
       {/* Screen-space label: constant size at any zoom, light text with a
           thick dark outline so it stays readable over bright or dark terrain. */}
-      <Html position={off} center zIndexRange={[40, 0]} style={{ pointerEvents: 'none' }}>
+      <Html position={off} zIndexRange={[40, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, calc(-100% - 10px))' }}>
         <div className="terrain3d-label">
           <span className="terrain3d-dot" style={{ background: color }} />
           {label}
@@ -148,7 +146,7 @@ function StationMarker({ hm, s, dropped, visited }) {
   );
 }
 
-function Scene({ hm, stations, plan, focus }) {
+function Scene({ hm, stations, plan, focus, lk }) {
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
   const visitedIds = plan.visitedLegs.map(l => l.to);
@@ -171,7 +169,7 @@ function Scene({ hm, stations, plan, focus }) {
       {stations.map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
-        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} />;
+        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} />;
       })}
       <OrbitControls makeDefault target={focus}
         maxPolarAngle={1.45} minDistance={150} maxDistance={12000}
@@ -192,8 +190,8 @@ export default function Terrain3D({ stations, plan }) {
 
   // Default framing centers on the route stops (Wildcat, Skinner, Kodiak) so
   // the traverse fills the view, not the middle of the whole crop.
-  const { camPos, focus } = useMemo(() => {
-    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0] };
+  const { camPos, focus, k } = useMemo(() => {
+    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1 };
     const routeStops = stations.filter(s => s.id !== 'Depot');
     let cx = 0, cy = 0, cz = 0;
     for (const s of routeStops) {
@@ -201,9 +199,10 @@ export default function Terrain3D({ stations, plan }) {
       cx += p[0]; cy += p[1]; cz += p[2];
     }
     cx /= routeStops.length; cy /= routeStops.length; cz /= routeStops.length;
-    // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back
+    // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
+    // and scale label anchors by the same factor so screen separation is preserved
     const k = (typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1;
-    return { camPos: [cx + 320 * k, cy + 1050 * k, cz + 1450 * k], focus: [cx, cy + 20, cz + 60] };
+    return { camPos: [cx + 300 * k, cy + 1500 * k, cz + 1150 * k], focus: [cx, cy + 20, cz + 60], k };
   }, [hm, stations]);
 
   if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">Loading 3D terrain (USGS 20m DTM)...</div>;
@@ -212,7 +211,7 @@ export default function Terrain3D({ stations, plan }) {
     <div className="relative h-full w-full">
       <Canvas camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
         style={{ background: '#0a0e17' }} dpr={[1, 1.5]}>
-        <Scene hm={hm} stations={stations} plan={plan} focus={focus} />
+        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} />
       </Canvas>
       <div className="absolute bottom-1 left-1 z-[1000] pointer-events-none bg-[#0d1420cc] border border-cyan-900 rounded px-2 py-1 text-[9px] leading-tight text-gray-300 max-w-[260px]">
         3D Terrain: Visual representation of 20m DTM grid. Not a navigational surface.
