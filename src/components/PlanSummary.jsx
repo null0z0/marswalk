@@ -24,8 +24,7 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, visite
             shortest-time ordering
           </p>
         </div>
-        <span className={`chip ${fits ? 'chip--green' : 'chip--red'}`}>
-          <span className="chip-dot" aria-hidden="true" />
+        <span className={`status-tag ${fits ? 'status-tag--ok' : 'status-tag--bad'}`}>
           {fits ? 'Fits' : 'Over budget'}
         </span>
       </div>

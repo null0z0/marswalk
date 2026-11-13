@@ -33,40 +33,42 @@ export default function DemoCoach({
 
   return (
     <aside className="demo-coach" role="dialog" aria-label="Guided demonstration">
-      <div className="demo-coach-head">
-        <div>
-          <div className="eyebrow" style={{ color: 'var(--cyan)' }}>
-            Guided demo · step {step + 1} of {STEPS.length}
+      <div className="demo-coach-body">
+        <div className="demo-coach-head">
+          <div>
+            <div className="eyebrow demo-eyebrow">
+              Guided demo · step {step + 1} of {STEPS.length}
+            </div>
+            <h3>{current.title}</h3>
           </div>
-          <h3>{current.title}</h3>
+          <button
+            type="button"
+            className="icon-button demo-close"
+            onClick={onClose}
+            aria-label="Close guided demo"
+          >
+            <CloseIcon />
+          </button>
         </div>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={onClose}
-          aria-label="Close guided demo"
-        >
-          <CloseIcon />
-        </button>
+
+        <div className="demo-steps" aria-hidden="true">
+          {STEPS.map((s, i) => (
+            <span key={s.title} className={i <= step ? 'is-on' : ''} />
+          ))}
+        </div>
+
+        <p>
+          {current.body}
+          {isOverrunStep && canOverrun ? (
+            <>
+              {' '}
+              Next stop: <strong>{nextStopName}</strong>.
+            </>
+          ) : null}
+        </p>
+
+        {isLast && planLostHint()}
       </div>
-
-      <div className="demo-steps" aria-hidden="true">
-        {STEPS.map((s, i) => (
-          <span key={s.title} className={i <= step ? 'is-on' : ''} />
-        ))}
-      </div>
-
-      <p>
-        {current.body}
-        {isOverrunStep && canOverrun ? (
-          <>
-            {' '}
-            Next stop: <strong style={{ color: 'var(--cyan)' }}>{nextStopName}</strong>.
-          </>
-        ) : null}
-      </p>
-
-      {isLast && planLostHint()}
 
       <div className="demo-coach-actions">
         <button
@@ -88,7 +90,7 @@ export default function DemoCoach({
 
 function planLostHint() {
   return (
-    <p style={{ color: 'var(--muted-2)' }}>
+    <p className="demo-coach-tip">
       Tip: use <strong>Undo step</strong> to try a different call, or{' '}
       <strong>Reset scenario</strong> to return to the default five-hour window.
     </p>

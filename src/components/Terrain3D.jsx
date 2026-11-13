@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import proj4 from 'proj4';
 import { Canvas, useLoader, useThree } from '@react-three/fiber';
 import { OrbitControls, Line, Html } from '@react-three/drei';
-import { ResetIcon } from './Icons.jsx';
 
 // Same Mars equidistant-cylindrical CRS as the 2D map (MapView.jsx).
 const EQC =
@@ -77,12 +76,17 @@ function Terrain({ hm }) {
 
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
   }, [texture]);
 
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial map={texture} roughness={1} metalness={0} />
+      <meshStandardMaterial
+        map={texture}
+        roughness={0.78}
+        metalness={0}
+      />
     </mesh>
   );
 }
@@ -148,6 +152,17 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   const off = base.map((v) => v * lk);
   return (
     <group position={[x, y, z]}>
+      {/* ground ring ties the marker to the surface, matching the 2D symbol */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
+        <ringGeometry args={[s.id === 'Depot' ? 30 : 22, s.id === 'Depot' ? 38 : 29, 40]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.6}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
       {/* thin neutral stem so it never reads as part of the cyan route */}
       <mesh position={[0, 45, 0]}>
         <cylinderGeometry args={[1.5, 1.5, 90, 6]} />
@@ -233,9 +248,10 @@ function Scene({ hm, stations, plan, focus, camPos, lk, resetToken }) {
   return (
     <>
       <CameraReset camPos={camPos} focus={focus} resetToken={resetToken} />
-      <ambientLight intensity={0.45} />
-      <hemisphereLight args={['#bfe6ff', '#3a1c0e', 0.35]} />
-      <directionalLight position={[-3200, 2100, -900]} intensity={2.1} />
+      <ambientLight intensity={0.34} />
+      <hemisphereLight args={['#cbe7ff', '#3a1c0e', 0.3]} />
+      <directionalLight position={[-3200, 2100, -900]} intensity={1.85} color="#fff4e6" />
+      <directionalLight position={[2900, 1500, 2400]} intensity={0.55} color="#cfe4ff" />
       <Terrain hm={hm} />
 
       {plan.visitedLegs.map((leg, k) => (
@@ -317,9 +333,8 @@ function useContainerPortrait(ref) {
   return portrait;
 }
 
-export default function Terrain3D({ stations, plan, resetKey = 0 }) {
+export default function Terrain3D({ stations, plan, resetKey = 0, active = true }) {
   const [hm, setHm] = useState(null);
-  const [localReset, setLocalReset] = useState(0);
   const shellRef = useRef(null);
   const portrait = useContainerPortrait(shellRef);
 
@@ -356,13 +371,13 @@ export default function Terrain3D({ stations, plan, resetKey = 0 }) {
     // label anchors by the same factor so screen separation is preserved.
     const kk = portrait ? 1.55 : 1;
     return {
-      camPos: [cx + 1700 * kk, cy + 1000 * kk, cz + 600 * kk],
-      focus: [cx, cy + 20, cz],
+      camPos: [cx + 1850 * kk, cy + 1200 * kk, cz + 700 * kk],
+      focus: [cx, cy + 30, cz],
       k: kk,
     };
   }, [hm, stations, portrait]);
 
-  const resetToken = resetKey + localReset;
+  const resetToken = resetKey;
 
   return (
     <div className="terrain-shell" ref={shellRef}>
@@ -375,6 +390,8 @@ export default function Terrain3D({ stations, plan, resetKey = 0 }) {
           camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
           style={{ background: 'transparent' }}
           dpr={[1, 1.5]}
+          gl={{ antialias: true, powerPreference: 'high-performance' }}
+          frameloop={active ? 'always' : 'never'}
         >
           <Scene
             hm={hm}
@@ -389,47 +406,34 @@ export default function Terrain3D({ stations, plan, resetKey = 0 }) {
       )}
 
       <div className="terrain-hud">
-        <b>3D TERRAIN · 20 m DTM</b>
-        Vertical exaggeration ×{VE} (display only). Not a navigational surface.
-        <br />
-        Texture: CTX ortho (grayscale).
+        <b>3D terrain · 20 m DTM</b>
+        <span className="terrain-hud-note">
+          Vertical exaggeration ×{VE} (display only). Not a navigational surface. Texture: CTX
+          ortho (grayscale).
+        </span>
       </div>
 
-      <div className="terrain-controls">
-        <button
-          type="button"
-          className="tool-toggle"
-          onClick={() => setLocalReset((r) => r + 1)}
-        >
-          <ResetIcon />
-          <span>Reset view</span>
-        </button>
-        <div className="segmented" aria-hidden="true">
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '0 8px',
-              color: '#34d399',
-              fontSize: 11,
-            }}
-          >
-            <i className="swatch" style={{ background: '#34d399' }} /> completed
-          </span>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '0 8px',
-              color: '#a5f3fc',
-              fontSize: 11,
-            }}
-          >
-            <i className="swatch" style={{ background: '#22d3ee' }} /> planned
-          </span>
-        </div>
+      <div className="terrain-legend" aria-label="3D route legend">
+        <span className="legend-completed">
+          <i className="legend-line" aria-hidden="true" />
+          Completed
+        </span>
+        <span className="legend-planned">
+          <i className="legend-line" aria-hidden="true" />
+          Planned
+        </span>
+        <span className="legend-return">
+          <i className="legend-dash" aria-hidden="true" />
+          Return
+        </span>
+        <span className="legend-deferred">
+          <i className="legend-dash" aria-hidden="true" />
+          Deferred
+        </span>
+        <span className="legend-base">
+          <i className="legend-dot" aria-hidden="true" />
+          Base
+        </span>
       </div>
 
       <div className="terrain-hint">Drag to orbit · scroll to zoom</div>

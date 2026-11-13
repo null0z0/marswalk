@@ -29,6 +29,10 @@ export default function App() {
   const [visited, setVisited] = useState([]);
   const [showGeology, setShowGeology] = useState(true);
   const [viewMode, setViewMode] = useState('2d');
+  // The 3D scene is created on first use, then kept mounted so switching views
+  // never tears down Leaflet or the WebGL context (the source of the lost Base
+  // label and the React nested-root unmount errors).
+  const [terrainMounted, setTerrainMounted] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
@@ -173,6 +177,17 @@ export default function App() {
         onOpenBrief={() => setBriefOpen(true)}
       />
 
+      {demoStep !== null && (
+        <DemoCoach
+          step={demoStep}
+          nextStopName={nextStopName}
+          canOverrun={Boolean(nextStopId)}
+          onNext={demoNext}
+          onApplyOverrun={demoOverrun}
+          onClose={() => setDemoStep(null)}
+        />
+      )}
+
       <div id="workspace" className="workspace">
         {drawerOpen && (
           <button
@@ -206,7 +221,11 @@ export default function App() {
 
         <main className="map-stage" aria-label="Mission map">
           <div className="map-shell">
-            {viewMode === '2d' ? (
+            <div
+              className={`map-pane${viewMode === '2d' ? ' is-active' : ' is-hidden'}`}
+              aria-hidden={viewMode === '2d' ? undefined : true}
+              inert={viewMode === '2d' ? undefined : true}
+            >
               <MapView
                 stations={stations}
                 plan={plan}
@@ -214,19 +233,29 @@ export default function App() {
                 setShowGeology={setShowGeology}
                 geojson={geojson}
                 resetKey={mapResetKey}
+                active={viewMode === '2d'}
               />
-            ) : (
-              <Suspense
-                fallback={
-                  <div className="terrain-loading">Loading 3D terrain (USGS 20 m DTM)…</div>
-                }
+            </div>
+
+            {terrainMounted && (
+              <div
+                className={`map-pane${viewMode === '3d' ? ' is-active' : ' is-hidden'}`}
+                aria-hidden={viewMode === '3d' ? undefined : true}
+                inert={viewMode === '3d' ? undefined : true}
               >
-                <Terrain3D
-                  stations={stations}
-                  plan={plan}
-                  resetKey={mapResetKey}
-                />
-              </Suspense>
+                <Suspense
+                  fallback={
+                    <div className="terrain-loading">Loading 3D terrain (USGS 20 m DTM)…</div>
+                  }
+                >
+                  <Terrain3D
+                    stations={stations}
+                    plan={plan}
+                    resetKey={mapResetKey}
+                    active={viewMode === '3d'}
+                  />
+                </Suspense>
+              </div>
             )}
 
             <div className="map-vignette" aria-hidden="true" />
@@ -246,7 +275,10 @@ export default function App() {
                   type="button"
                   className={viewMode === '3d' ? 'is-active' : ''}
                   aria-pressed={viewMode === '3d'}
-                  onClick={() => setViewMode('3d')}
+                  onClick={() => {
+                    setTerrainMounted(true);
+                    setViewMode('3d');
+                  }}
                 >
                   <TerrainIcon />
                   <span>3D Terrain</span>
@@ -348,17 +380,6 @@ export default function App() {
         onClose={() => setBriefOpen(false)}
         onStartDemo={startDemo}
       />
-
-      {demoStep !== null && (
-        <DemoCoach
-          step={demoStep}
-          nextStopName={nextStopName}
-          canOverrun={Boolean(nextStopId)}
-          onNext={demoNext}
-          onApplyOverrun={demoOverrun}
-          onClose={() => setDemoStep(null)}
-        />
-      )}
     </div>
   );
 }

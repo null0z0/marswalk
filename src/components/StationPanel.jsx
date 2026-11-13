@@ -1,10 +1,10 @@
-import { AlertIcon, CheckIcon, CloseIcon, TargetIcon } from './Icons.jsx';
+import { AlertIcon, CloseIcon, TargetIcon } from './Icons.jsx';
 
 function statusFor(station, dropped, visited, next) {
-  if (dropped) return { key: 'deferred', label: 'Deferred', chip: 'chip--red' };
-  if (visited) return { key: 'completed', label: 'Completed', chip: 'chip--green' };
-  if (next) return { key: 'next', label: 'Next', chip: 'chip--cyan' };
-  return { key: 'planned', label: 'Planned', chip: '' };
+  if (dropped) return { key: 'deferred', label: 'Deferred', tone: 'bad' };
+  if (visited) return { key: 'completed', label: 'Completed', tone: 'ok' };
+  if (next) return { key: 'next', label: 'Next', tone: 'info' };
+  return { key: 'planned', label: 'Planned', tone: '' };
 }
 
 export default function StationPanel({
@@ -79,8 +79,7 @@ export default function StationPanel({
                     {s.unit}
                   </span>
                 </div>
-                <span className={`chip ${status.chip}`}>
-                  {visited && <CheckIcon size={11} />}
+                <span className={`status-tag status-tag--${status.tone || status.key}`}>
                   {status.label}
                 </span>
               </div>
@@ -108,7 +107,7 @@ export default function StationPanel({
 
               <div className="station-controls">
                 {visited ? (
-                  <span className="chip chip--green">Completed · simulated EVA</span>
+                  <span className="status-tag status-tag--ok">Completed · simulated EVA</span>
                 ) : (
                   <>
                     <span className="station-select-wrap">

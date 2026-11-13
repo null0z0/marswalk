@@ -69,7 +69,7 @@ export default function ElevationProfile({ plan, stations }) {
             <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={data}
-              margin={{ top: 16, right: 38, bottom: 0, left: -14 }}
+              margin={{ top: 18, right: 44, bottom: 0, left: -12 }}
               aria-label="Elevation profile of the active traverse"
             >
               <CartesianGrid strokeDasharray="3 4" vertical={false} />
@@ -78,16 +78,16 @@ export default function ElevationProfile({ plan, stations }) {
                 dataKey="d"
                 domain={[0, 'dataMax']}
                 tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
-                tick={{ fontSize: 10, fill: '#7a8da5' }}
+                tick={{ fontSize: 11, fill: '#8ea3bd' }}
                 tickMargin={6}
                 stroke="rgba(148,197,255,0.18)"
               />
               <YAxis
                 type="number"
                 domain={['dataMin - 4', 'dataMax + 4']}
-                tick={{ fontSize: 10, fill: '#7a8da5' }}
+                tick={{ fontSize: 11, fill: '#8ea3bd' }}
                 tickFormatter={(v) => v.toFixed(0)}
-                width={46}
+                width={48}
                 stroke="rgba(148,197,255,0.18)"
               />
               <Tooltip
@@ -119,7 +119,7 @@ export default function ElevationProfile({ plan, stations }) {
                   label={{
                     value: 'now',
                     position: 'insideTopRight',
-                    fontSize: 9,
+                    fontSize: 10,
                     fill: '#6ee7b7',
                   }}
                 />
@@ -136,7 +136,7 @@ export default function ElevationProfile({ plan, stations }) {
                     fill="#fbbf24"
                     stroke="#05080f"
                     strokeWidth={1.5}
-                    label={{ value: name, fontSize: 10, fill: '#fcd34d', position: pos, offset: 5 }}
+                    label={{ value: name, fontSize: 11, fill: '#fcd34d', position: pos, offset: 6 }}
                   />
                 );
               })}

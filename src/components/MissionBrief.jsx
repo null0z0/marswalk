@@ -43,7 +43,7 @@ export default function MissionBrief({ open, onClose, onStartDemo }) {
       <div className="brief-hero">
         <div className="brief-kicker">
           <OrbitSmallIcon size={15} />
-          Mission brief · EVA-01
+          Mission brief
         </div>
         <h2 id="brief-title" className="brief-title">
           Walk Jezero. Watch the plan make a science call.

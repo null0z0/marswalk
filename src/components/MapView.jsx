@@ -3,13 +3,12 @@ import {
   ImageOverlay,
   GeoJSON,
   Polyline,
-  Tooltip,
   Marker,
   ZoomControl,
   ScaleControl,
   useMap,
 } from 'react-leaflet';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'proj4leaflet';
 
@@ -26,6 +25,11 @@ const BOUNDS = [
 
 const CASING = { color: '#04070d', weight: 6.5, opacity: 0.6 };
 
+// Leaflet divIcons are immutable once created. Caching them per station/status
+// keeps the marker DOM (and the permanent tooltip bound to it) stable across
+// plan re-renders instead of rebuilding the icon on every React render.
+const ICON_CACHE = new Map();
+
 function statusOf(id, dropped, visited, next) {
   if (id === 'Depot') return 'base';
   if (dropped) return 'deferred';
@@ -35,12 +39,16 @@ function statusOf(id, dropped, visited, next) {
 }
 
 function stationIcon(s, status) {
+  const key = `${s.id}:${status}`;
+  const cached = ICON_CACHE.get(key);
+  if (cached) return cached;
+
   const badge =
     s.id === 'Depot'
       ? ''
       : `<span class="station-marker__badge">${s.id === 'Wildcat' ? 'W' : 'S'}</span>`;
   const skinner = s.id === 'Skinner' ? ' station-marker--skinner' : '';
-  return L.divIcon({
+  const icon = L.divIcon({
     className: 'station-marker-host',
     iconSize: [30, 30],
     iconAnchor: [15, 15],
@@ -50,6 +58,69 @@ function stationIcon(s, status) {
       ${badge}
     </div>`,
   });
+  ICON_CACHE.set(key, icon);
+  return icon;
+}
+
+// Permanent station labels bound imperatively to Leaflet markers.
+// Unlike the declarative <Tooltip>, these are bound once per marker and only
+// have their content/options updated when the plan changes — they are never
+// unbound and rebound on every React render, which was the root cause of the
+// Base label disappearing after view switches and plan updates.
+function PermanentLabels({ stations, plan, active = true }) {
+  const map = useMap();
+  const boundRef = useRef(new Map());
+
+  const droppedIds = plan.dropped.map((d) => d.id);
+  const visitedIds = plan.visitedLegs.map((l) => l.to);
+  const nextId = plan.sim.legs.find((l) => l.to !== 'Depot')?.to || null;
+
+  useEffect(() => {
+    if (!map) return undefined;
+
+    const refresh = () => {
+      stations.filter((s) => s.lat != null).forEach((s) => {
+        const dropped = droppedIds.includes(s.id);
+        const visited = visitedIds.includes(s.id);
+        const status = statusOf(s.id, dropped, visited, nextId === s.id);
+        const dir = s.id === 'Skinner' ? 'left' : 'right';
+        const off = s.id === 'Skinner' ? [-10, 0] : [10, 0];
+        const name = s.id === 'Depot' ? 'Base' : s.name;
+        const label = name + (dropped ? ' · deferred' : '');
+
+        map.eachLayer((layer) => {
+          if (!(layer instanceof L.Marker)) return;
+          const pos = layer.getLatLng();
+          if (Math.abs(pos.lat - s.lat) < 1e-9 && Math.abs(pos.lng - s.lon) < 1e-9) {
+            const key = `${s.lat}:${s.lon}`;
+            const already = boundRef.current.get(key);
+            layer.bindTooltip(label, {
+              permanent: true,
+              sticky: false,
+              interactive: false,
+              opacity: 1,
+              direction: dir,
+              offset: off,
+              className: `station-label station-label--${status}`,
+            });
+            if (!already || active) {
+              layer.openTooltip();
+            }
+            boundRef.current.set(key, true);
+          }
+        });
+      });
+    };
+
+    refresh();
+    if (active) {
+      const t = setTimeout(refresh, 50);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [map, stations, droppedIds, visitedIds, nextId, active]);
+
+  return null;
 }
 
 function ViewController({ stations, resetKey }) {
@@ -62,7 +133,30 @@ function ViewController({ stations, resetKey }) {
   return null;
 }
 
-export default function MapView({ stations, plan, showGeology, geojson, resetKey }) {
+// Both views stay mounted. Leaflet therefore needs an explicit re-measure when
+// the 2D pane becomes visible again after a 3D session.
+function MapLifecycle({ active }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!active) return undefined;
+    const t1 = window.setTimeout(() => map.invalidateSize({ animate: false }), 30);
+    const t2 = window.setTimeout(() => map.invalidateSize({ animate: false }), 220);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [active, map]);
+  return null;
+}
+
+export default function MapView({
+  stations,
+  plan,
+  showGeology,
+  geojson,
+  resetKey,
+  active = true,
+}) {
   const byId = Object.fromEntries(stations.map((s) => [s.id, s]));
   const droppedIds = plan.dropped.map((d) => d.id);
   const visitedIds = plan.visitedLegs.map((l) => l.to);
@@ -82,13 +176,15 @@ export default function MapView({ stations, plan, showGeology, geojson, resetKey
       center={[18.458, 77.408]}
       zoom={5}
       minZoom={3}
-      maxZoom={5}
+      maxZoom={6}
       zoomControl={false}
       doubleClickZoom={false}
       scrollWheelZoom
       className="map-view"
     >
       <ViewController stations={stations} resetKey={resetKey} />
+      <PermanentLabels stations={stations} plan={plan} active={active} />
+      <MapLifecycle active={active} />
       <ZoomControl position="topleft" />
       <ScaleControl position="bottomright" imperial={false} maxWidth={90} />
 
@@ -196,8 +292,6 @@ export default function MapView({ stations, plan, showGeology, geojson, resetKey
           const dropped = droppedIds.includes(s.id);
           const visited = visitedIds.includes(s.id);
           const status = statusOf(s.id, dropped, visited, nextId === s.id);
-          const dir = s.id === 'Skinner' ? 'left' : 'right';
-          const off = s.id === 'Skinner' ? [-10, 0] : [10, 0];
           const name = s.id === 'Depot' ? 'Base' : s.name;
           return (
             <Marker
@@ -206,17 +300,7 @@ export default function MapView({ stations, plan, showGeology, geojson, resetKey
               icon={stationIcon(s, status)}
               title={name}
               keyboard
-            >
-              <Tooltip
-                permanent
-                direction={dir}
-                offset={off}
-                className={`station-label station-label--${status}`}
-              >
-                {name}
-                {dropped ? ' · deferred' : ''}
-              </Tooltip>
-            </Marker>
+            />
           );
         })}
     </MapContainer>

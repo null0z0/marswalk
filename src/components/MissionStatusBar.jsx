@@ -1,10 +1,10 @@
 import { BookIcon, PlayIcon, TargetIcon, OrbitIcon } from './Icons.jsx';
 
 const PHASES = {
-  nominal: { label: 'Nominal plan', className: 'phase-chip--nominal' },
-  progress: { label: 'In progress', className: 'phase-chip--progress' },
-  replanned: { label: 'Replanned', className: 'phase-chip--replanned' },
-  infeasible: { label: 'Infeasible', className: 'phase-chip--infeasible' },
+  nominal: { label: 'Nominal plan', className: 'phase-status--nominal' },
+  progress: { label: 'In progress', className: 'phase-status--progress' },
+  replanned: { label: 'Replanned', className: 'phase-status--replanned' },
+  infeasible: { label: 'Infeasible', className: 'phase-status--infeasible' },
 };
 
 export default function MissionStatusBar({
@@ -50,20 +50,15 @@ export default function MissionStatusBar({
     <header className="mission-header">
       <div className="brand-row">
         <div className="brand-lockup">
-          <OrbitIcon size={38} />
+          <OrbitIcon size={34} />
           <div className="brand-copy">
-            <div className="brand-title">
-              MARSWALK <span>PLANNER</span>
-            </div>
-            <div className="brand-sub">
-              Jezero Delta Front · Simulated Crewed EVA · EVA-01
-            </div>
+            <div className="brand-title">MARSWALK</div>
           </div>
         </div>
 
-        <span className={`phase-chip ${phaseStyle.className}`} role="status">
-          <span className="chip-dot" aria-hidden="true" />
-          <span className="phase-label-long">{phaseStyle.label}</span>
+        <span className={`phase-status ${phaseStyle.className}`} role="status">
+          <span className="status-mark" aria-hidden="true" />
+          {phaseStyle.label}
         </span>
 
         <div className="header-actions">
@@ -217,7 +212,8 @@ export default function MissionStatusBar({
         </p>
         <div className="context-actions">
           <span className="next-stop">
-            NEXT <b>{nextStopName || 'Return to Base'}</b>
+            <span className="next-stop-label">Next</span>
+            <b>{nextStopName || 'Return to Base'}</b>
           </span>
           <button type="button" className="btn btn-primary btn-sm" onClick={onStartDemo}>
             <PlayIcon />

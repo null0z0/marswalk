@@ -33,9 +33,8 @@ export default function TimeControl({
           </h2>
           <p className="panel-sub">Advance the EVA or introduce a delay at the next station.</p>
         </div>
-        <span className={`chip ${hasNext ? 'chip--cyan' : 'chip--green'}`}>
-          <span className="chip-dot" aria-hidden="true" />
-          {hasNext ? 'Active' : 'Traverse complete'}
+        <span className={`status-tag ${hasNext ? 'status-tag--info' : 'status-tag--ok'}`}>
+          {hasNext ? 'Active' : 'Complete'}
         </span>
       </div>
 
