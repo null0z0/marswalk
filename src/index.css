@@ -6,3 +6,10 @@
    long labels (Kodiak candidate + LOST) never clip off the viewport edge */
 .station-label{white-space:nowrap}
 @media (max-width:767px){.station-label{white-space:normal;width:150px;text-align:center;line-height:1.2}}
+
+/* 3D station labels: screen-space (drei Html), light text with a thick dark
+   outline so they stay readable over bright or dark terrain at any zoom */
+.terrain3d-label{display:flex;align-items:center;gap:6px;font:bold 12px monospace;color:#eef6ff;white-space:nowrap;
+  -webkit-text-stroke:3px #060a12;paint-order:stroke fill;
+  text-shadow:2px 0 0 #060a12,-2px 0 0 #060a12,0 2px 0 #060a12,0 -2px 0 #060a12,2px 2px 0 #060a12,-2px -2px 0 #060a12,2px -2px 0 #060a12,-2px 2px 0 #060a12}
+.terrain3d-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #060a12;flex:none}

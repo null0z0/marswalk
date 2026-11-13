@@ -21,7 +21,7 @@ export default function ElevationProfile({ plan, stations }) {
           <Tooltip formatter={(v, n) => [v.toFixed(1) + ' m', 'elev']} labelFormatter={v => `${(+v).toFixed(0)} m`} />
           <Line type="monotone" dataKey="e" stroke="#4aa8ff" dot={false} strokeWidth={1.5} isAnimationActive={false} />
           {stationMarks.map((m, i) => {
-            const pos = m.id === 'Skinner' ? 'right' : 'top';
+            const pos = m.id === 'Wildcat' ? 'bottom' : m.id === 'Skinner' ? 'top' : 'top';
             const name = m.id === 'Depot' ? (i === 0 ? 'Base' : 'Base (return)') : m.id;
             return <ReferenceDot key={i} x={m.d} y={m.e} r={3} fill="#ffb02e" stroke="none"
               label={{ value: name, fontSize: 8, fill: '#ffb02e', position: pos, offset: 4 }} />;

@@ -12,19 +12,20 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
           <div className="font-bold text-cyan-300">MISSION DECISION: {plan.dropped.map(d => d.name).join(', ')} deferred</div>
           <div>{plan.visitedLegs.length + plan.kept.length} of {objTotal} objectives retained</div>
           <div>Lost: {plan.dropped.map(d => d.objective).join('; ')}</div>
+          <div className="mt-1">Dropping {plan.dropped.map(d => d.name).join(', ')} saves <b>{Math.max(0, Math.round(plan.full.total - plan.sim.total))} min</b> ({Math.round(plan.elapsed + plan.full.total)} min with every objective vs {Math.round(plan.elapsed + plan.sim.total)} min now).</div>
         </div>
       )}
       <table className="w-full font-mono text-[10px]">
-        <thead><tr className="text-gray-500"><th className="text-left">Leg</th><th>Dist</th><th>Asc</th><th>Time</th></tr></thead>
+        <thead><tr className="text-gray-500"><th className="text-left pr-2">Leg</th><th className="px-2">Dist</th><th className="px-2">Asc</th><th className="pl-3">Time</th></tr></thead>
         <tbody>
           {plan.visitedLegs.map((l, i) => {
             clock += l.walkMin + l.dwellUsed;
-            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right">{l.metrics.dist.toFixed(0)}m</td><td className="text-right">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right whitespace-nowrap">{(l.walkMin + l.dwellUsed).toFixed(0)} min (done @ {l.paceUsed.toFixed(1)})</td></tr>;
+            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap">{(l.walkMin + l.dwellUsed).toFixed(0)} min (done @ {l.paceUsed.toFixed(1)})</td></tr>;
           })}
           {plan.sim.legs.map((l, i) => {
             const dwellPart = l.to === 'Depot' ? 0 : dwellMin;
             clock += l.metrics.minutes + dwellPart;
-            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right">{l.metrics.dist.toFixed(0)}m</td><td className="text-right">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right whitespace-nowrap">{(l.metrics.minutes + dwellPart).toFixed(0)} min (end {Math.round(clock)})</td></tr>;
+            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap">{(l.metrics.minutes + dwellPart).toFixed(0)} min (end {Math.round(clock)})</td></tr>;
           })}
         </tbody>
       </table>
