@@ -3,9 +3,10 @@
 
 Source: https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif
 Reads the native 20 m grid with tifffile, crops the app window around the
-delta front, and writes {nx, ny, dx, x0, y0, values}. x0/y0 are the west/
-south outer edges in the file's equidistant-cylindrical Mars CRS
-(sphere radius 3396190 m), matching worldXY in Terrain3D.jsx.
+delta front, and writes {nx, ny, dx, x0, y0, values}. x0/y0 are the
+pixel-center easting/northing of the first column / top row in the file's
+equidistant-cylindrical Mars CRS (sphere radius 3396190 m), matching
+worldXY in Terrain3D.jsx.
 """
 import json
 import numpy as np, tifffile

@@ -9,12 +9,10 @@ const crs = new L.Proj.CRS('MARS:EQC',
 const BOUNDS = [[18.43, 77.375], [18.485, 77.44]];
 
 function stationIcon(s, dropped, visited) {
-  const color = s.id === 'Depot' ? '#ffffff' : dropped ? '#884444' : visited ? '#44cc66' : s.id === 'Kodiak' ? '#cc88ff' : s.id === 'Skinner' ? '#2dd4bf' : '#ffb02e';
+  const color = s.id === 'Depot' ? '#ffffff' : dropped ? '#884444' : visited ? '#44cc66' : s.id === 'Skinner' ? '#2dd4bf' : '#ffb02e';
   const shape = s.id === 'Skinner'
     ? `width:13px;height:13px;background:${color};transform:rotate(45deg);border:2px solid #0a0e17;`
-    : s.id === 'Kodiak'
-      ? `width:15px;height:15px;border-radius:50%;border:2.5px dashed ${color};background:transparent;`
-      : `width:13px;height:13px;border-radius:50%;background:${color};border:2px solid #0a0e17;`;
+    : `width:13px;height:13px;border-radius:50%;background:${color};border:2px solid #0a0e17;`;
   return L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8], html: `<div style="${shape}"></div>` });
 }
 
@@ -54,13 +52,12 @@ export default function MapView({ stations, plan, showGeology, setShowGeology, g
       {stations.filter(s => s.lat != null).map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
-        const candidate = s.id === 'Kodiak';
-        const dir = s.id === 'Skinner' ? 'left' : s.id === 'Kodiak' ? 'top' : 'right';
-        const off = s.id === 'Skinner' ? [-10, 0] : s.id === 'Kodiak' ? [0, -12] : [10, 0];
+        const dir = s.id === 'Skinner' ? 'left' : 'right';
+        const off = s.id === 'Skinner' ? [-10, 0] : [10, 0];
         return (
           <Marker key={s.id} position={[s.lat, s.lon]} icon={stationIcon(s, dropped, visited)}>
             <Tooltip permanent direction={dir} offset={off} className="station-label">
-              {s.id === 'Depot' ? 'Base' : s.name}{candidate ? ' (candidate - not verified)' : ''}{dropped ? ' — LOST' : ''}
+              {s.id === 'Depot' ? 'Base' : s.name}{dropped ? ' — LOST' : ''}
             </Tooltip>
           </Marker>
         );

@@ -10,7 +10,7 @@
   "photoNote": null,
   "flags": [
    "Hypothetical habitat at a real depot location",
-   "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, taken while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point."
+   "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, recorded while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point."
   ],
   "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json"
  },
@@ -23,8 +23,9 @@
   "objective": "Fine-grained delta-front mudstones recording quiet-water deposition; the rover found organic signals correlated with sulfates here (not evidence of life).",
   "photo": "/img/wildcat.jpg",
   "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
+  "photoId": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
   "flags": [
-   "Stop position = rover position during the Wildcat Ridge sampling campaign (samples Hazeltop sol 509, Bearwallow sol 516, per NASA samples catalog; position from archived NASA M20 waypoints drive record). The outcrop itself is not a surveyed point."
+   "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
  },
@@ -39,25 +40,9 @@
   "photoNote": "Mastcam-Z left 110mm frame, sol 477 (NASA raw image ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
   "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
   "flags": [
-   "Stop position = rover position during the Skinner Ridge sampling campaign (samples Swift Run sol 490, Skyland sol 495, per NASA samples catalog; position from archived NASA M20 waypoints drive record). The outcrop itself is not a surveyed point.",
-   "Same outcrop complex as Wildcat (~20 m apart, from the two waypoint positions): two distinct objectives, not two distant outcrops"
+   "Stop position = last recorded rover position near the Swift Run / Skyland sample location (samples sealed sols 490 and 495 at Skinner Ridge per the NASA samples catalog; sol-477 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+   "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops"
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
- },
- {
-  "id": "Kodiak",
-  "name": "Kodiak candidate viewpoint",
-  "lat": null,
-  "lon": null,
-  "unit": "unavailable - no verified position",
-  "objective": "Observe delta-layer geometry recording lake-level change and flooding (studied remotely by the rover).",
-  "photo": "/img/kodiak.jpg",
-  "photoNote": "Mastcam-Z left 110mm frame, sol 275 (NASA raw image ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ). NASA metadata confirms sol and camera; it does not identify the feature shown.",
-  "photoId": "ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ",
-  "flags": [
-   "Position unavailable: no numeric coordinate found in opened sources (NASA M20 waypoints, USGS SIM 3464, published studies describe Kodiak butte only relative to the landing site). Earlier approximate coordinate removed.",
-   "Studied remotely by the rover, never visited - excluded from route planning"
-  ],
-  "src": "https://www.science.org/doi/10.1126/science.abl4051"
  }
 ]

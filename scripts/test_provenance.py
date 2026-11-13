@@ -106,10 +106,10 @@ for sid, s in stations.items():
     hit = next(((fdata[idx['name']][i], fdata[idx['symbol']][i]) for i, g in enumerate(shp) if g.contains(p)), None)
     check(f'{sid} unit label == SIM 3464 polygon', hit is not None and s['unit'].startswith(hit[1] or ''), f'{hit}')
 
-# 6. Kodiak excluded (coordinate unavailable)
-check('Kodiak coordinate unavailable (null)', stations['Kodiak']['lat'] is None and stations['Kodiak']['lon'] is None)
-check('Kodiak excluded from legs', all('Kodiak' not in k for k in legs))
-check('Kodiak unit label unavailable', 'unavailable' in stations['Kodiak']['unit'])
+# 6. Kodiak removed from all app data (no verifiable coordinate; user directive 2026-11-13)
+check('Kodiak absent from stations', 'Kodiak' not in stations)
+check('Kodiak absent from legs', all('Kodiak' not in k for k in legs))
+check('Kodiak absent from photos', 'kodiak' not in json.load(open('public/data/station_photos.json')))
 
 # 7. every image has a resolvable NASA source URL; shipped file matches NASA bytes
 photos = json.load(open('public/data/station_photos.json'))

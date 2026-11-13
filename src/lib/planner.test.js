@@ -3,7 +3,7 @@ import { buildPlan, legMetrics } from './planner.js';
 import legsData from '../../public/data/legs.json' with { type: 'json' };
 
 // Legs are regenerated from the DTM by scripts/build_legs.py (routable
-// stations only: Kodiak has no verified coordinate and is excluded).
+// stations only: the Kodiak candidate viewpoint was removed entirely - no verified coordinate).
 // Loop Depot-Wildcat-Skinner-Depot = 380.19 + 20.14 + 389.19 = 789.52 m.
 const STOPS = [
   { id: 'Wildcat' }, { id: 'Skinner' },

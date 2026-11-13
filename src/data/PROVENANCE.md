@@ -30,7 +30,7 @@ external is needed beyond the browser binary.
 | 3 | USGS SIM 3464 geologic map geodatabase (Nili.gdb, layer GeoUnits_v1) | https://pubs.usgs.gov/sim/3464/sim3464_database.zip | data_raw/sim3464_database.zip (a88bd53a...; git-ignored, 349 MB), extracted to data_raw/sim3464_JezeroNili_FINAL/ | public/geology.geojson, station unit labels | build_geology.py, check_geology.py |
 | 4 | NASA M20 waypoints feed, archived daily snapshots (verbatim captures of the NASA feed, mirrored at github.com/stiles/mars-perseverance-waypoints, data/raw/) | live: https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json | data_raw/waypoints_2022-06-26.json (04b9f66d...), waypoints_2022-07-19.json (ae0b9165...), waypoints_2022-12-23.json (d1a3a4c1...) | station coordinates (drive records sols 477 / 502 / 654) | test_provenance.py |
 | 5 | NASA M20 waypoints live feed (mutable: always carries the latest sol; checksum records the audit-time bytes, expected to differ on re-fetch; not used for historical positions) | same as above | data_raw/M20_waypoints_current.json (59b68e9c..., audit-time) | structure cross-check only | fetch_sources.sh |
-| 6 | NASA Mars 2020 raw-image archive API + frames | https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json | public/img/wildcat.jpg, skinner.jpg, kodiak.jpg | photos + sol/camera metadata | test_provenance.py, verify_photos.py |
+| 6 | NASA Mars 2020 raw-image archive API + frames | https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json | public/img/wildcat.jpg, skinner.jpg | photos + sol/camera metadata | test_provenance.py, verify_photos.py |
 
 Exact photo frames (source pages resolve HTTP 200, checked by test_provenance.py):
 
@@ -38,7 +38,6 @@ Exact photo frames (source pages resolve HTTP 200, checked by test_provenance.py
 | --- | --- | --- |
 | public/img/wildcat.jpg | ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ (sol 502, Mastcam-Z left 110 mm) | https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ |
 | public/img/skinner.jpg | ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ (sol 477, Mastcam-Z left 110 mm) | https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ |
-| public/img/kodiak.jpg | ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ (sol 275, Mastcam-Z left 110 mm) | https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ |
 
 ## Station-to-sample association evidence
 
@@ -71,11 +70,13 @@ Archived waypoint snapshots (source 4) contain the rover's drive records:
   The depot is an area, not a surveyed point (records of sols 652-654 span
   ~15 m within it).
 
-Kodiak: **UNAVAILABLE** - no numeric coordinate in any opened source (NASA M20
-waypoints, SIM 3464, NASA photojournal, published studies describe the butte
+Kodiak candidate viewpoint: **removed entirely on 2026-11-13** (user
+directive). No numeric coordinate exists in any opened source (NASA M20
+waypoints, SIM 3464, NASA photojournal; published studies describe the butte
 only relative to the landing site, ~2.3 km west). The pre-audit value
-(18.4633, 77.4107) contradicted those descriptions and was removed from every
-computation; the UI shows "POSITION UNAVAILABLE - NOT ROUTABLE".
+(18.4633, 77.4107) contradicted those descriptions. The station, its sol-275
+photo (ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ) and all Kodiak UI
+were removed rather than kept as an estimate.
 
 ## Geometry and safety labeling
 
@@ -91,10 +92,11 @@ walkability assessment. The UI states this in the plan and profile captions.
 
 | UI value | Value | Status | Source / derivation | Verification |
 | --- | --- | --- | --- | --- |
-| Base coordinate | 18.45253, 77.40784 | REAL DATA | NASA M20 archived snapshot, sol-654 drive record (depot emplacement; first tube sol 653 per NASA WATSON article) | matches snapshot record to 5 decimals (test) |
-| Wildcat coordinate | 18.45865, 77.40592 | REAL DATA | sol-502 drive record; parked through Hazeltop 509 / Bearwallow 516 (samples catalog + no intervening drive records) | matches snapshot to 5 decimals (test) |
-| Skinner coordinate | 18.4589, 77.40617 | REAL DATA | sol-477 drive record; parked through Swift Run 490 / Skyland 495 | matches snapshot to 5 decimals (test) |
-| Kodiak coordinate | UNAVAILABLE | UNAVAILABLE | no numeric coordinate in opened sources | asserted null; excluded from legs/routes (tests) |
+| Base coordinate | 18.45253, 77.40784 | REAL DATA | NASA M20 archived snapshot, sol-654 drive record (depot emplacement; first tube sol 653 per NASA WATSON article) - last recorded position at the depot area | matches snapshot record to 5 decimals (test) |
+| Wildcat coordinate | 18.45865, 77.40592 | REAL DATA | sol-502 drive record; last recorded position near the Hazeltop / Bearwallow sample location (samples catalog + no intervening drive records) | matches snapshot to 5 decimals (test) |
+| Skinner coordinate | 18.4589, 77.40617 | REAL DATA | sol-477 drive record; last recorded position near the Swift Run / Skyland sample location | matches snapshot to 5 decimals (test) |
+| Exact sample-collection spots (Swift Run, Skyland, Hazeltop, Bearwallow) | UNAVAILABLE | UNAVAILABLE | opened sources give sample names, features and sols, and recorded rover positions - not exact equality | reported to user 2026-11-13; stations labeled "near the X sample location" |
+| Kodiak (all data) | removed | - | no numeric coordinate in opened sources | removal asserted in tests (absent from stations/legs/photos) |
 | Station elevations Base / Wildcat / Skinner | -2546.64 / -2519.85 / -2516.72 m | REAL DATA | DTM nearest cell (20 m grid) at each coordinate | independent re-sample from dtm.tif equals leg endpoints (test) |
 | Leg distances | 380.19 / 20.96 / 390.34 m (table: 380m / 21m / 390m) | REAL DATA | horizontal straight-line between waypoints; elevation samples from DTM every 10 m | every 10 m sample recomputed from dtm.tif (test); rendered table checked against legs.json (DOM check) |
 | Leg ascents | +27 / +3 / +0 m (exact 26.79 / 3.46 / 0.00 in traversal direction) | REAL DATA | sum of positive 10 m DTM steps | recomputed (test); rendered table checked (DOM check) |
@@ -110,10 +112,9 @@ walkability assessment. The UI states this in the plan and profile captions.
 | "Total 167 / 300 min FITS" / "227 / 300 min FITS" | as shown | DERIVED | as above | rendered text inspected |
 | Elevation profile x axis 0.0k-0.8k, station dots Base/Wildcat/Skinner/Base(return), profile end at 791.49 m | as plotted | REAL DATA | concatenated leg profiles | DOM check: curve endpoint at full data span, dots at cumulative leg distances (42.0/142.4/147.9/251.0 px, exact match) |
 | Elevation profile y ticks -2512 to -2549 m (domain -2550.6..-2512.4) | as plotted | REAL DATA | DTM elevation range of the route | DOM check: plotted y endpoint maps to -2546.6 m == Base DTM elevation |
-| "~20 m apart" note (Skinner flag + 3D label) | 20.96 m | REAL DATA | Wildcat-Skinner leg distance | recomputed (test) |
+| "~21 m apart (~1 DTM cell)" note (Skinner flag + 3D label) | 20.96 m, about one 20 m DTM cell | REAL DATA | Wildcat-Skinner leg distance | recomputed (test) |
 | Unit labels Njf (Base) / NHjf2 (Wildcat, Skinner) | as shown | REAL DATA | SIM 3464 Nili.gdb GeoUnits_v1 | point-in-polygon against the geodatabase itself (test) |
-| Kodiak unit label | "unavailable - no verified position" | UNAVAILABLE | follows the unavailable coordinate | asserted (test) |
-| Photos: sol 502 / 477 / 275, "Mastcam-Z left 110mm" | as shown | REAL DATA | NASA raw-images API (imageid, sol, camera filter ZCAM_L0_RGB; 110 mm from the imageid focal code 1100LMJ + camera metadata) | API record match + source pages HTTP 200 + pixel-compare vs NASA full-res frames (mean diff <4/255 = JPEG recompression) |
+| Photos: sol 502 / 477, "Mastcam-Z left 110mm" | as shown | REAL DATA | NASA raw-images API (imageid, sol, camera filter ZCAM_L0_RGB); 110 mm from the filename focal code verified against the ASU decoder table (https://mastcamz.asu.edu/decoding-the-raw-publicly-released-mastcam-z-image-filenames/) | API record match + source pages HTTP 200 + pixel-compare vs NASA full-res frames (mean diff <4/255 = JPEG recompression) |
 | Photo captions ("NASA metadata confirms sol and camera; it does not identify the feature shown") | as shown | provenance statement | - | - |
 | Geology overlay polygons | as shown | REAL DATA | SIM 3464 geodatabase, MTM_clon77.5E -> lon/lat | build_geology.py; point-in-polygon check at stations |
 | Map/3D texture (grayscale) | as shown | REAL DATA | USGS CTX orthomosaic crop | fresh crop compared (mean abs diff ~6/255 = JPEG recompression; same window and size) |
@@ -130,4 +131,7 @@ recorded in the repo; at identical coordinates its distances were ~1% off the
 documented straight-segment DTM resample. The current legs.json is regenerated
 by scripts/build_legs.py and every sample is re-verified against the DTM.
 Removed unused artifact: data_raw/rover_points_full.geojson (superseded by the
-archived snapshots).
+archived snapshots). Kodiak station, photo and UI removed 2026-11-13 (no
+verifiable coordinate). A shortlist of farther delta-front sample-site
+candidates (Shuyak, Mageik, Kukaklek; records in the archived snapshots) was
+reported to the user for a decision; no candidate has been added to the app.

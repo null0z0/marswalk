@@ -18,7 +18,6 @@ const LABEL_OFFSET = {
   Depot: [0, 150, 0],
   Wildcat: [-280, 190, 150],
   Skinner: [280, 300, -150],
-  Kodiak: [0, 240, 0],
 };
 // Mobile (lk > 1): wider world offsets so the screen-space labels of the two
 // ridges (~20 m apart in reality) do not collide; desktop offsets unchanged.
@@ -32,7 +31,6 @@ function markerColor(s, dropped, visited) {
   if (s.id === 'Depot') return '#ffffff';
   if (dropped) return '#cc3333';
   if (visited) return '#44cc66';
-  if (s.id === 'Kodiak') return '#cc88ff';
   if (s.id === 'Skinner') return '#2dd4bf';
   return '#ffb02e';
 }
@@ -131,7 +129,7 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
   // Short map labels only; caveats/disclaimers live in the left panel card.
-  const name = s.id === 'Depot' ? 'Base' : s.id === 'Kodiak' ? 'Kodiak (Candidate)' : s.name;
+  const name = s.id === 'Depot' ? 'Base' : s.name;
   const label = name + (dropped ? ' - LOST' : '');
   const base = (lk > 1 && LABEL_OFFSET_MOBILE[s.id]) || LABEL_OFFSET[s.id] || [0, 150, 0];
   const off = base.map(v => v * lk);
@@ -159,7 +157,7 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   );
 }
 
-// Wildcat and Skinner are ~20 m apart, so their markers nearly touch at
+// Wildcat and Skinner are 20.96 m apart (about one 20 m DTM cell), so their markers nearly touch at
 // these scales; a small note on the leader lines keeps that from reading as
 // a rendering error. Positions stay true.
 function SepNote({ hm, a, b, lk }) {
@@ -167,7 +165,7 @@ function SepNote({ hm, a, b, lk }) {
   const mid = [(pa[0] + pb[0]) / 2, Math.max(pa[1], pb[1]) + 160, (pa[2] + pb[2]) / 2];
   return (
     <Html position={mid} zIndexRange={[30, 0]} style={{ pointerEvents: 'none', transform: lk > 1 ? 'translate(calc(-50% + 35px), -50%)' : 'translate(-50%, -50%)' }}>
-      <div className="terrain3d-sep">~20 m apart</div>
+      <div className="terrain3d-sep">~21 m apart (~1 DTM cell)</div>
     </Html>
   );
 }
@@ -216,11 +214,11 @@ export default function Terrain3D({ stations, plan }) {
     });
   }, []);
 
-  // Default framing centers on the route stops (Wildcat, Skinner, Kodiak) so
+  // Default framing centers on the route stops (Wildcat, Skinner) so
   // the traverse fills the view, not the middle of the whole crop.
   const { camPos, focus, k } = useMemo(() => {
     if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1 };
-    // Frame all four stops so Base on the floor and Kodiak up on the scarp
+    // Frame all stops so Base on the floor and the ridge stops
     // are both visible; oblique ~35 deg elevation keeps the relief readable
     // instead of flattening to a top-down map.
     const routable = stations.filter(s => s.lat != null);

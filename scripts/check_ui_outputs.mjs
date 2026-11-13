@@ -95,16 +95,15 @@ const allElevs = Object.values(L).flat().map(p => p[1]);
 const domMin = Math.min(...allElevs) - 4, domMax = Math.max(...allElevs) + 4;
 const yTop = Math.min(yAxisLine.y1, yAxisLine.y2), yBot = Math.max(yAxisLine.y1, yAxisLine.y2);
 const endElev = domMax - (endY - yTop) / (yBot - yTop) * (domMax - domMin);
-const ends = [L['Depot|Skinner'][0][1], L['Depot|Skinner'].at(-1)[1]];
-const matchEnd = ends.find(e => Math.abs(endElev - e) < 2);
-check('plotted profile y endpoint == a DTM-derived leg endpoint elevation', matchEnd !== undefined,
-  `plotted end ${endElev.toFixed(1)} m vs leg endpoints ${ends.map(e => e.toFixed(2)).join(' / ')} m (domain ${domMin.toFixed(1)}..${domMax.toFixed(1)})`);
+// the route is a round trip: it must END at the same Base elevation it STARTED from
+// (first sample of the first leg). Tight check: one specific value, no alternatives.
+const baseElev = L['Depot|Wildcat'][0][1];
+check('plotted profile y endpoint == Base start elevation (round trip)', Math.abs(endElev - baseElev) < 2,
+  `plotted end ${endElev.toFixed(1)} m vs Base ${baseElev.toFixed(2)} m (domain ${domMin.toFixed(1)}..${domMax.toFixed(1)})`);
 
-// ---- Kodiak unavailable state --------------------------------------------
-await d.click('text=Kodiak');
-await d.waitForTimeout(400);
+// ---- Kodiak fully removed from the UI ------------------------------------
 const body = (await d.textContent('body')).replace(/\s+/g, ' ');
-check('Kodiak card shows POSITION UNAVAILABLE', /POSITION UNAVAILABLE/i.test(body));
+check('UI contains no Kodiak references', !/kodiak/i.test(body));
 
 await b.close();
 server.close();
