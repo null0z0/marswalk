@@ -3,7 +3,7 @@ export default function TimeControl({ windowMin, dwellMin, paceKmh, setWindowMin
     <div className="p-3 bg-[#101826] rounded border border-cyan-900">
       <div className="flex gap-2">
         <button onClick={overrunApplied ? onUndoOverrun : onOverrun} disabled={!overrunApplied && !overrunLeft}
-          className={`px-3 py-1 rounded text-xs font-bold ${overrunApplied ? 'bg-green-700 hover:bg-green-600' : 'bg-amber-600 hover:bg-amber-500'} disabled:bg-gray-700`}>
+          className={`w-[215px] px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap ${overrunApplied ? 'bg-green-700 hover:bg-green-600' : 'bg-amber-600 hover:bg-amber-500'} disabled:bg-gray-700`}>
           {overrunApplied ? '+60 applied - undo' : '+60 min overrun at current stop'}
         </button>
         <button onClick={onReset} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">Reset plan</button>
@@ -25,7 +25,7 @@ export default function TimeControl({ windowMin, dwellMin, paceKmh, setWindowMin
           </label>
         </div>
       </details>
-      <div className="mt-2 text-[9px] text-gray-500">Environmental conditions (MEDA dust, temperature, wind) not modelled - no live Mars weather feed in this planner.</div>
+      <div className="mt-2 text-[9px] text-gray-500">Environmental conditions (MEDA dust, temperature, wind) are not modelled in this planner.</div>
     </div>
   );
 }

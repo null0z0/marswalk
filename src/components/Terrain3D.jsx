@@ -16,15 +16,16 @@ const VE = 2;
 // connector line back to the marker (same idea as the 2D tooltip directions).
 const LABEL_OFFSET = {
   Depot: [0, 150, 0],
-  Wildcat: [-160, 130, 100],
-  Skinner: [160, 210, -100],
+  Wildcat: [-280, 190, 150],
+  Skinner: [280, 300, -150],
   Kodiak: [0, 240, 0],
 };
 // Mobile (lk > 1): wider world offsets so the screen-space labels of the two
 // ridges (~20 m apart in reality) do not collide; desktop offsets unchanged.
 const LABEL_OFFSET_MOBILE = {
-  Wildcat: [-320, 320, 180],
-  Skinner: [320, 420, -180],
+  Depot: [-180, 200, 0],
+  Wildcat: [-450, 430, 240],
+  Skinner: [450, 560, -240],
 };
 
 function markerColor(s, dropped, visited) {
@@ -161,11 +162,11 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
 // Wildcat and Skinner are ~20 m apart, so their markers nearly touch at
 // these scales; a small note on the leader lines keeps that from reading as
 // a rendering error. Positions stay true.
-function SepNote({ hm, a, b }) {
+function SepNote({ hm, a, b, lk }) {
   const pa = stationPos(hm, a), pb = stationPos(hm, b);
-  const mid = [(pa[0] + pb[0]) / 2, Math.max(pa[1], pb[1]) + 100, (pa[2] + pb[2]) / 2];
+  const mid = [(pa[0] + pb[0]) / 2, Math.max(pa[1], pb[1]) + 160, (pa[2] + pb[2]) / 2];
   return (
-    <Html position={mid} zIndexRange={[30, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, -50%)' }}>
+    <Html position={mid} zIndexRange={[30, 0]} style={{ pointerEvents: 'none', transform: lk > 1 ? 'translate(calc(-50% + 35px), -50%)' : 'translate(-50%, -50%)' }}>
       <div className="terrain3d-sep">~20 m apart</div>
     </Html>
   );
@@ -180,12 +181,13 @@ function Scene({ hm, stations, plan, focus, lk }) {
 
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[-2500, 3500, -1500]} intensity={1.6} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[-3200, 2100, -900]} intensity={2.1} />
       <Terrain hm={hm} />
       {legs.map((leg, k) => (
         <Line key={'leg' + k} points={legPoints(hm, byId[leg.from], byId[leg.to])}
-          color="#22d3ee" lineWidth={2.5} />
+          color="#22d3ee" lineWidth={2.5}
+          dashed={leg.to === 'Depot' && k > 0} dashSize={18} gapSize={12} />
       ))}
       {droppedIds.map(id => (
         <Line key={'drop' + id} points={legPoints(hm, lastVisited, byId[id])}
@@ -196,7 +198,7 @@ function Scene({ hm, stations, plan, focus, lk }) {
         const visited = visitedIds.includes(s.id);
         return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} />;
       })}
-      <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} />
+      <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />
       <OrbitControls makeDefault target={focus}
         maxPolarAngle={1.45} minDistance={150} maxDistance={12000}
         enableDamping dampingFactor={0.08} />
