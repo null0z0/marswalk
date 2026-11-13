@@ -37,7 +37,7 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
         </div>
       )}
       {plan.infeasible && <div className="mt-1 text-red-400 font-bold">INFEASIBLE: must-have stations exceed the remaining window by {Math.round(plan.shortfall)} min. Increase the window or change assumptions - no station was silently dropped.</div>}
-      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on straight-segment terrain-following distance from the 20m DTM grid (nearest-cell samples every 10m; not a surveyed path; 20m is grid spacing, not a vertical-accuracy guarantee; no human-safety or walkability claim).</div>
+      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on horizontal straight-line distance between waypoints (geometric, waypoint-derived); heights and ascent from the 20m DTM (nearest-cell samples every 10m along each straight segment; not a surveyed path; 20m is grid spacing, not a vertical-accuracy guarantee; geometry only - no human-safety or walkability claim).</div>
     </div>
   );
 }

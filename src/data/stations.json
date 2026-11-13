@@ -10,7 +10,7 @@
   "photoNote": null,
   "flags": [
    "Hypothetical habitat at a real depot location",
-   "Position = rover drive record sol 654 during Three Forks depot emplacement, first tube deposited sol 653 (NASA samples catalog; position from archived NASA M20 waypoints). The depot is an area, not a surveyed point."
+   "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, taken while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point."
   ],
   "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json"
  },

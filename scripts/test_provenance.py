@@ -47,11 +47,25 @@ for key, prof in legs.items():
     net = prof[-1][1] - prof[0][1]
     check(f'{key}: ascent >= net gain', asc >= net - 1e-9, f'asc {asc:.2f} net {net:.2f}')
 
-# 3. UI consistency derived from data: header route length == table leg sum == profile end
-table_sum = sum(prof[-1][0] for prof in legs.values())
-profile_end = table_sum  # profile concatenates the same leg profiles
-header_km = table_sum / 1000
-check('header route == table sum == profile end (computed)', abs(header_km - 0.79) < 0.005, f'{table_sum:.2f} m -> {header_km:.2f} km displayed')
+# 2b. station elevations == independent raw DTM sample at each station coordinate.
+# Interpolation: nearest DTM cell center (the method build_legs.py documents; the
+# DTM is a 20 m grid, so a station elevation is its containing cell's value).
+for sid, s in stations.items():
+    if s['lat'] is None: continue
+    mx, my = to_m(s['lon'], s['lat'])
+    elev = dtm_h(mx, my)
+    vals = []
+    for key, prof in legs.items():
+        a, b = key.split('|')
+        if a == sid: vals.append(prof[0][1])
+        if b == sid: vals.append(prof[-1][1])
+    ok = len(vals) > 0 and all(abs(v - elev) < 0.011 for v in vals)
+    check(f'{sid} elevation == independent raw DTM nearest-cell sample', ok, f'DTM {elev} m; leg endpoints {sorted(set(round(v,2) for v in vals))}')
+
+# 3. header/table/profile consistency is checked against the RENDERED DOM by
+# scripts/check_ui_outputs.mjs (no hardcoded expected values there either: it
+# derives expectations from the served data files). Nothing to assert here that
+# would not be legs.json compared with itself.
 
 # 4. station coordinates == archived NASA waypoint drive records (5-decimal rounding only)
 SRC = {'Wildcat': ('data_raw/waypoints_2022-07-19.json', 502), 'Skinner': ('data_raw/waypoints_2022-06-26.json', 477), 'Depot': ('data_raw/waypoints_2022-12-23.json', 654)}
@@ -61,6 +75,25 @@ for sid, (path, sol) in SRC.items():
     p = recs[-1]['properties']; s = stations[sid]
     ok = abs(p['lat'] - s['lat']) <= 5e-6 and abs(p['lon'] - s['lon']) <= 5e-6
     check(f'{sid} coordinate == NASA waypoint record sol {sol}', ok, f"({p['lat']:.8f}, {p['lon']:.8f})")
+
+# 4b. sampling-sol association: the archived snapshots contain NO drive record at
+# any other position between the station record sol and the last sampling sol, so
+# the rover was still at that record when the samples were sealed (sample names,
+# features and sols per the NASA samples catalog, science.nasa.gov).
+PARKED = [('data_raw/waypoints_2022-07-19.json', 477, 495, 'sol-477 (Skinner; Swift Run 490, Skyland 495)'),
+          ('data_raw/waypoints_2022-12-23.json', 502, 516, 'sol-502 (Wildcat; Hazeltop 509, Bearwallow 516)')]
+for path, base_sol, last_sample_sol, label in PARKED:
+    feats = json.load(open(path))['features']
+    others = sorted({f['properties']['sol'] for f in feats
+                     if f['properties'].get('sol') and base_sol < f['properties']['sol'] <= last_sample_sol})
+    check(f'no intervening drive records: rover held {label}', not others, f'intervening records: {others or "none"}')
+
+# 4c. Depot association: the archived 2022-12-23 snapshot's final record is the
+# sol-654 position, recorded while the rover was emplacing the Three Forks depot
+# (first tube deposited sol 653, NASA WATSON article, science.nasa.gov).
+feats = json.load(open('data_raw/waypoints_2022-12-23.json'))['features']
+recs = sorted(f['properties']['sol'] for f in feats if f['properties'].get('sol'))
+check('Depot: 2022-12-23 snapshot ends at the sol-654 record (depot emplacement window)', recs[-1] == 654, f'last record sol {recs[-1]}')
 
 # 5. geology unit labels == point-in-polygon against the SIM 3464 geodatabase itself
 meta, _, geoms, fdata = raw.read('data_raw/sim3464_JezeroNili_FINAL/Geodatabase/Nili.gdb', layer='GeoUnits_v1', columns=['unit','name','symbol'])
