@@ -8,6 +8,7 @@ curl -sL -o data_raw/M20_waypoints_current.json "https://mars.nasa.gov/mmgis-map
 curl -sL -o data_raw/sim3464_database.zip "https://pubs.usgs.gov/sim/3464/sim3464_database.zip"
 sha256sum -c data_raw/SHA256SUMS.txt
 
+curl -sL -o data_raw/orthomosaic_6m.tif "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_orthoMosaic_6m_Eqc_latTs0_lon0.tif"
 curl -sL -o /tmp/sim3464_database.zip "https://pubs.usgs.gov/sim/3464/sim3464_database.zip"
 unzip -oq /tmp/sim3464_database.zip -d data_raw/
 echo "verify: sha256sum -c data_raw/SHA256SUMS.txt (paths adjusted)"
