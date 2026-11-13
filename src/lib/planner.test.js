@@ -49,7 +49,7 @@ describe('planner decision loop (display rounding 167/133/207/107/67)', () => {
     expect(r.dropped).toHaveLength(0);
     expect(r.kept).toHaveLength(2);
     expect(Math.round(r.sim.total)).toBe(167);
-    expect(Math.round(r.sim.dist)).toBe(790); // shortest loop regardless of priority order
+    expect(Math.round(r.sim.dist)).toBe(791); // shortest loop regardless of priority order
   });
   it('f) zero window: graceful infeasible shortfall, no crash, nothing silently dropped', () => {
     const r = buildPlan({ ...BASE, windowMin: 0, mustHaves: ['Wildcat', 'Skinner'] });
@@ -83,11 +83,11 @@ describe('distance invariant: leg table sum == header total == profile end', () 
     expect(tableSum(r)).toBeCloseTo(headerTotal(r), 6);
     expect(profileEnd(r)).toBeCloseTo(headerTotal(r), 6);
   });
-  it('overrun scenario: 380.2 + 20.1 + 389.2 = 789.5 m, header shows 0.79 km', () => {
+  it('overrun scenario: 380.2 + 21.0 + 390.3 = 791.5 m, header shows 0.79 km', () => {
     const w = legMetrics(legsData, 'Depot', 'Wildcat', 1.0).minutes;
     const r = buildPlan({ ...BASE, visited: [{ id: 'Wildcat', dwellUsed: 100, walkMin: w, paceUsed: 1.0 }] });
     expect(tableSum(r)).toBeCloseTo(headerTotal(r), 6);
-    expect(headerTotal(r)).toBeCloseTo(789.52, 1);
+    expect(headerTotal(r)).toBeCloseTo(791.49, 1);
     expect((headerTotal(r) / 1000).toFixed(2)).toBe('0.79');
   });
   it('ascent is the sum of positive steps and at least the net gain, per leg', () => {

@@ -1,0 +1,5 @@
+node_modules/
+dist/
+data_raw/sim3464_JezeroNili_FINAL/
+data_raw/sim3464_database.zip
+data_raw/orthomosaic_6m.tif

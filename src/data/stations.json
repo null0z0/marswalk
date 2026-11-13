@@ -10,7 +10,7 @@
   "photoNote": null,
   "flags": [
    "Hypothetical habitat at a real depot location",
-   "Position = rover location on sol 654 during depot emplacement (NASA M20 waypoints); the depot is an area, not a surveyed point"
+   "Position = rover drive record sol 654 during Three Forks depot emplacement, first tube deposited sol 653 (NASA samples catalog; position from archived NASA M20 waypoints). The depot is an area, not a surveyed point."
   ],
   "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json"
  },
@@ -24,14 +24,14 @@
   "photo": "/img/wildcat.jpg",
   "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
   "flags": [
-   "Stop position = rover position on sol 502 (NASA M20 waypoints) when the cited frame was taken; the outcrop itself is not a surveyed point"
+   "Stop position = rover position during the Wildcat Ridge sampling campaign (samples Hazeltop sol 509, Bearwallow sol 516, per NASA samples catalog; position from archived NASA M20 waypoints drive record). The outcrop itself is not a surveyed point."
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
  },
  {
   "id": "Skinner",
   "name": "Skinner Ridge",
-  "lat": 18.45888,
+  "lat": 18.4589,
   "lon": 77.40617,
   "unit": "NHjf2 (Jezero fan 2 unit, SIM 3464 point-in-polygon)",
   "objective": "Layered sandstone with grains transported from far outside Jezero - sediment provenance and transport energy.",
@@ -39,7 +39,7 @@
   "photoNote": "Mastcam-Z left 110mm frame, sol 477 (NASA raw image ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
   "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
   "flags": [
-   "Stop position = rover position on sol 477 (NASA M20 waypoints) when the cited frame was taken; the outcrop itself is not a surveyed point",
+   "Stop position = rover position during the Skinner Ridge sampling campaign (samples Swift Run sol 490, Skyland sol 495, per NASA samples catalog; position from archived NASA M20 waypoints drive record). The outcrop itself is not a surveyed point.",
    "Same outcrop complex as Wildcat (~20 m apart, from the two waypoint positions): two distinct objectives, not two distant outcrops"
   ],
   "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
