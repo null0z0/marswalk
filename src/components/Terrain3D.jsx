@@ -75,8 +75,9 @@ function Terrain({ hm }) {
   );
 }
 
-// Terrain height (world Y) at an EQC-meter point, bilinear inside the 20m
-// grid so draped lines follow the surface smoothly instead of stair-stepping.
+// Terrain height (world Y) at an EQC-meter point, interpolated on the exact
+// rendered triangle surface (same (a,c,b)/(b,c,d) split as the mesh below),
+// so draped lines lie on the mesh, not on a differing bilinear surface.
 function terrainY(hm, mx, my) {
   const { x0, y0, dx, nx, ny, min, values } = hm;
   const fx = Math.max(0, Math.min(nx - 1.001, (mx - x0) / dx));
@@ -85,7 +86,9 @@ function terrainY(hm, mx, my) {
   const tx = fx - i, ty = fy - j;
   const v00 = values[j][i], v10 = values[j][i + 1];
   const v01 = values[j + 1][i], v11 = values[j + 1][i + 1];
-  const v = v00 * (1 - tx) * (1 - ty) + v10 * tx * (1 - ty) + v01 * (1 - tx) * ty + v11 * tx * ty;
+  const v = (tx + ty <= 1)
+    ? v00 + (v10 - v00) * tx + (v01 - v00) * ty
+    : v11 + (v01 - v11) * (1 - tx) + (v10 - v11) * (1 - ty);
   return (v - min) * VE;
 }
 
@@ -100,8 +103,8 @@ function stationPos(hm, s) {
   return [x, terrainY(hm, mx, my), z];
 }
 
-// Drape a straight leg on the terrain: sample every 10 m and follow the
-// bilinear surface, lifted 5 m so the line never sinks into the mesh.
+// Drape a straight leg on the terrain: sample every 10 m on the exact mesh
+// surface, lifted just 1.5 m so the line hugs the ground without z-fighting.
 function legPoints(hm, a, b) {
   const [ax, ay] = proj4(EQC, [a.lon, a.lat]);
   const [bx, by] = proj4(EQC, [b.lon, b.lat]);
@@ -112,7 +115,7 @@ function legPoints(hm, a, b) {
     const t = k / n;
     const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t;
     const [x, z] = worldXY(hm, mx, my);
-    pts.push([x, terrainY(hm, mx, my) + 5, z]);
+    pts.push([x, terrainY(hm, mx, my) + 1.5, z]);
   }
   return pts;
 }
@@ -126,9 +129,10 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   const off = (LABEL_OFFSET[s.id] || [0, 150, 0]).map(v => v * lk);
   return (
     <group position={[x, y, z]}>
+      {/* thin neutral stem so it never reads as part of the cyan route */}
       <mesh position={[0, 45, 0]}>
-        <cylinderGeometry args={[3, 3, 90, 6]} />
-        <meshBasicMaterial color={color} transparent opacity={0.65} />
+        <cylinderGeometry args={[1.5, 1.5, 90, 6]} />
+        <meshBasicMaterial color="#94a3b8" transparent opacity={0.45} />
       </mesh>
       <mesh position={[0, 95, 0]}>
         <sphereGeometry args={[20, 16, 16]} />
@@ -219,7 +223,7 @@ export default function Terrain3D({ stations, plan }) {
     // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
     // and scale label anchors by the same factor so screen separation is preserved
     const k = (typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1;
-    return { camPos: [cx + 300 * k, cy + 950 * k, cz + 1400 * k], focus: [cx, cy + 20, cz], k };
+    return { camPos: [cx + 1700 * k, cy + 1000 * k, cz + 600 * k], focus: [cx, cy + 20, cz], k };
   }, [hm, stations]);
 
   if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">Loading 3D terrain (USGS 20m DTM)...</div>;
