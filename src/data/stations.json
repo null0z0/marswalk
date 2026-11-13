@@ -1,0 +1,62 @@
+[
+ {
+  "id": "Depot",
+  "name": "Base - Three Forks depot site",
+  "lat": 18.4526,
+  "lon": 77.4079,
+  "unit": "Njf (Jezero floor unit)",
+  "objective": "Start/return point. Real Perseverance sample-depot location; the crewed habitat is hypothetical.",
+  "photo": null,
+  "photoNote": null,
+  "flags": [
+   "Hypothetical habitat at a real depot location"
+  ],
+  "src": null
+ },
+ {
+  "id": "Wildcat",
+  "name": "Wildcat Ridge",
+  "lat": 18.45865,
+  "lon": 77.40592,
+  "unit": "NHjf2 (Jezero fan 2 unit, map-overlay attribution)",
+  "objective": "Fine-grained delta-front mudstones recording quiet-water deposition; the rover found organic signals correlated with sulfates here (not evidence of life).",
+  "photo": "/img/wildcat.jpg",
+  "photoNote": "ZCAM photo at Wildcat outcrop, sol 502 (historical rover imagery).",
+  "flags": [
+   "Rover-documented outcrop (site 26); stop position from approximate rover parked coordinates, not a surveyed station"
+  ],
+  "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
+ },
+ {
+  "id": "Skinner",
+  "name": "Skinner Ridge",
+  "lat": 18.45888,
+  "lon": 77.40617,
+  "unit": "NHjf2 (Jezero fan 2 unit, map-overlay attribution)",
+  "objective": "Layered sandstone with grains transported from far outside Jezero - sediment provenance and transport energy.",
+  "photo": "/img/skinner.jpg",
+  "photoNote": "Mastcam-Z 110mm frame of the layered Skinner Ridge outcrop, sol 477 (historical rover imagery).",
+  "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
+  "flags": [
+   "Same outcrop complex as Wildcat (~20 m apart): two distinct objectives, not two distant outcrops"
+  ],
+  "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
+ },
+ {
+  "id": "Kodiak",
+  "name": "Kodiak candidate viewpoint",
+  "lat": 18.4633,
+  "lon": 77.4107,
+  "unit": "NHjf2 at approximate target coordinate",
+  "objective": "Observe delta-layer geometry recording lake-level change and flooding (studied remotely by the rover).",
+  "photo": "/img/kodiak.jpg",
+  "photoNote": "Mastcam-Z 110mm frame of the Kodiak butte area, imaged from ~2 km away on sol 275 (historical rover imagery); the outcrop was studied remotely, never visited.",
+  "photoId": "ZL0_0275_0691341248_678EBY_N0080000ZCAM08292_1100LMJ",
+  "flags": [
+   "Candidate viewpoint - not verified",
+   "Approximate target coordinate; never visited by the rover",
+   "Access, line of sight, and diagnostic view NOT verified"
+  ],
+  "src": "https://www.science.org/doi/10.1126/science.abl4051"
+ }
+]
