@@ -20,6 +20,12 @@ const LABEL_OFFSET = {
   Skinner: [160, 210, -100],
   Kodiak: [0, 240, 0],
 };
+// Mobile (lk > 1): wider world offsets so the screen-space labels of the two
+// ridges (~20 m apart in reality) do not collide; desktop offsets unchanged.
+const LABEL_OFFSET_MOBILE = {
+  Wildcat: [-320, 320, 180],
+  Skinner: [320, 420, -180],
+};
 
 function markerColor(s, dropped, visited) {
   if (s.id === 'Depot') return '#ffffff';
@@ -126,7 +132,8 @@ function StationMarker({ hm, s, dropped, visited, lk }) {
   // Short map labels only; caveats/disclaimers live in the left panel card.
   const name = s.id === 'Depot' ? 'Base' : s.id === 'Kodiak' ? 'Kodiak (Candidate)' : s.name;
   const label = name + (dropped ? ' - LOST' : '');
-  const off = (LABEL_OFFSET[s.id] || [0, 150, 0]).map(v => v * lk);
+  const base = (lk > 1 && LABEL_OFFSET_MOBILE[s.id]) || LABEL_OFFSET[s.id] || [0, 150, 0];
+  const off = base.map(v => v * lk);
   return (
     <group position={[x, y, z]}>
       {/* thin neutral stem so it never reads as part of the cyan route */}
