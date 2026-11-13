@@ -1,0 +1,12 @@
+Shuyak (Amalik, sample sol 575, record sol 565, 18.45073,77.40144):
+  A. window 300, prio Wildcat1 Skinner2 Shuyak3, no must-haves:
+    route: Base -> Skinner -> Wildcat -> Shuyak -> Depot | total 260.7 min (elapsed 0.0), dist 1344.7 m, asc 50.1 m
+    kept: [Wildcat,Skinner,Shuyak] dropped: []
+  B. window 240, same priorities (planner drops lowest non-must):
+    route: Base -> Wildcat -> Skinner -> Depot | total 167.5 min (elapsed 0.0), dist 791.5 m, asc 30.3 m
+    kept: [Wildcat,Skinner] dropped: [Shuyak (lowest-priority non-must-have)]
+  C. window 240, prio Wildcat1 Shuyak2 Skinner3 (Skinner lowest):
+    route: Base -> Shuyak -> Wildcat -> Depot | total 198.8 min (elapsed 0.0), dist 1313.6 m, asc 46.7 m
+    kept: [Wildcat,Shuyak] dropped: [Skinner (lowest-priority non-must-have)]
+  D. +60 overrun at Wildcat (visited, dwellUsed 120), window 300, prio as A:
+    route: Base -> Wildcat -> Skinner -> Depot | total 227.5 min (elapsed 142.8), dist 791.5 m, asc 3.5 m
