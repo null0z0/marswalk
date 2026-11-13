@@ -1,4 +1,4 @@
-export default function MissionStatusBar({ plan, windowMin }) {
+export default function MissionStatusBar({ plan, windowMin, scenarioLabel }) {
   const total = plan.elapsed + plan.sim.total;
   const buffer = windowMin - total;
   const met = plan.visitedLegs.length + plan.kept.length;
@@ -11,7 +11,7 @@ export default function MissionStatusBar({ plan, windowMin }) {
   const pct = v => `${Math.max(0, Math.min(100, (v / windowMin) * 100))}%`;
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 bg-[#0d1420] border-b border-cyan-900 text-[10px] md:text-xs font-mono">
-      <span className="text-cyan-300 font-bold tracking-wide">MARSWalk Planner - Jezero Delta Front</span>
+      <span className="text-cyan-300 font-bold tracking-wide">MARSWalk Planner - {scenarioLabel || 'Jezero Delta Front'}</span>
       <span>Budget <b>{Math.round(windowMin)} min</b></span>
       <span>Planned <b>{Math.round(total)} min</b></span>
       <span className={buffer < 0 ? 'text-red-400' : buffer < 60 ? 'text-amber-400' : 'text-green-400'}>

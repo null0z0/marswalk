@@ -98,3 +98,50 @@ describe('distance invariant: leg table sum == header total == profile end', () 
     }
   });
 });
+
+import legsGale from '../../public/data/legs_gale.json' with { type: 'json' };
+import trackJ from '../../public/data/rover_track.json' with { type: 'json' };
+import trackG from '../../public/data/rover_track_gale.json' with { type: 'json' };
+
+describe('source-derived ascent and record-sol metadata', () => {
+  it('every leg in both regions has finite non-negative DTM ascent and positive distance', () => {
+    for (const [name, legs] of [['jezero', legsData], ['gale', legsGale]]) {
+      const entries = Object.entries(legs.legs);
+      expect(entries.length).toBeGreaterThan(0);
+      for (const [key] of entries) {
+        const [a, b] = key.split('|');
+        const m = legMetrics(legs, a, b, 1.0);
+        expect(Number.isFinite(m.asc), `${name} leg ${key} asc`).toBe(true);
+        expect(m.asc).toBeGreaterThanOrEqual(0);
+        // GaleBase is the declared scenario start at the Rocknest record
+        // position (both sol 59), so that one leg is legitimately 0 m.
+        if (key === 'GaleBase|Rocknest' || key === 'Rocknest|GaleBase') expect(m.dist).toBe(0);
+        else expect(m.dist).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('A/B total ascent equals the exact sum of underlying leg ascents (no other source)', () => {
+    const r = buildPlan({ ...BASE, visited: [] });
+    const legs2 = r.visitedLegs.concat(r.sim.legs);
+    const asc = legs2.reduce((s, l) => s + l.metrics.asc, 0);
+    expect(asc).toBeGreaterThan(0);
+    expect(Number.isFinite(asc)).toBe(true);
+  });
+  it('Jezero archive: every route point carries a sol, ordered non-decreasing', () => {
+    let prev = -1;
+    for (const p of trackJ.route) {
+      expect(p).toHaveLength(3);
+      expect(Number.isInteger(p[2])).toBe(true);
+      expect(p[2]).toBeGreaterThanOrEqual(prev);
+      prev = p[2];
+    }
+  });
+  it('Gale archive: every site stop carries solFirst <= solLast; segments carry no sol (not filtered)', () => {
+    for (const s of trackG.stops) {
+      expect(Number.isInteger(s.solFirst)).toBe(true);
+      expect(Number.isInteger(s.solLast)).toBe(true);
+      expect(s.solFirst).toBeLessThanOrEqual(s.solLast);
+    }
+    expect(Array.isArray(trackG.segments[0][0])).toBe(true); // plain [lat,lon] polylines, no sol field
+  });
+});

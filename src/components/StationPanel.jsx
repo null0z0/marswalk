@@ -1,7 +1,7 @@
-export default function StationPanel({ stations, priorities, setPriority, mustHaves, toggleMustHave, droppedIds, visitedLegs }) {
+export default function StationPanel({ stations, baseId = 'Depot', priorities, setPriority, mustHaves, toggleMustHave, droppedIds, visitedLegs }) {
   const visitedIds = visitedLegs.map(l => l.to);
-  const base = stations.find(s => s.id === 'Depot');
-  const science = stations.filter(s => s.id !== 'Depot');
+  const base = stations.find(s => s.id === baseId);
+  const science = stations.filter(s => s.id !== baseId);
 
   return (
     <div className="space-y-2">
@@ -9,7 +9,7 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
         <div key={base.id} className="p-2 rounded border border-gray-700 bg-[#0d1420]/50 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-bold text-gray-200">{base.name}</span>
-            <span className="text-gray-400 font-mono text-[9px]">BASE HABITAT</span>
+            <span className="text-gray-400 font-mono text-[9px]">'DECLARED SCENARIO START'</span>
           </div>
           <div className="text-gray-400">{base.unit}</div>
           {base.unitDescription && (
@@ -18,7 +18,7 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
             </div>
           )}
           <details className="mt-1">
-            <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats, photo</summary>
+            <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats{base.photo ? ', photo' : ''}</summary>
             <div className="mt-1 text-gray-300">{base.objective}</div>
             {base.flags.map(f => <div key={f} className="text-amber-400 text-[10px]">⚠ {f}</div>)}
             {base.photo && (
@@ -59,7 +59,7 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
               </div>
             )}
             <details key={dropped ? 'd' : 'k'} open className="mt-1">
-              <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats, photo</summary>
+              <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}</summary>
               <div className={`mt-1 transition-all duration-500 ${dropped ? 'line-through' : ''}`}>
                 {(() => { const [first, ...rest] = s.objective.split(/(?<=\.)\s+/); return <><b className="text-gray-200">{first}</b>{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}
               </div>
@@ -70,6 +70,9 @@ export default function StationPanel({ stations, priorities, setPriority, mustHa
                   <img src={s.photo} alt={s.name} className={`mt-1 rounded w-full transition-all duration-700 ${dropped ? 'grayscale opacity-50' : ''}`} />
                   <div className="text-[9px] text-gray-500 mt-1">{s.photoNote}{s.src && <> <a href={s.src} target="_blank" rel="noreferrer" className="text-gray-500 underline break-all">source</a></>}</div>
                 </>
+              )}
+              {s.meda && (
+                <div className="text-[9px] text-gray-500 mt-1 border-t border-gray-800 pt-1">{s.meda} <a href="https://atmos.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/data_calibrated_env/" target="_blank" rel="noreferrer" className="text-gray-500 underline break-all">PDS MEDA archive</a></div>
               )}
             </details>
           </div>

@@ -1,0 +1,22 @@
+{
+ "elevMin": -2575.7,
+ "elevMax": -2418.4,
+ "slopeMaxDeg": 32.7,
+ "contourIntervalM": 10.0,
+ "gridM": 20.0,
+ "cells": [
+  194,
+  164
+ ],
+ "bounds": [
+  [
+   18.4295017,
+   77.3748908
+  ],
+  [
+   18.4848373,
+   77.4403488
+  ]
+ ],
+ "source": "Derived from the app elevation grid (public/data/heightmap.json), itself built from the USGS Mars 2020 TRN CTX DTM (20 m). Derived views of the same data, not independent measurements."
+}

@@ -18,6 +18,13 @@ const LABEL_OFFSET = {
   Depot: [0, 150, 0],
   Wildcat: [-280, 190, 150],
   Skinner: [280, 300, -150],
+  // Gale Yellowknife Bay cluster: all stops sit within ~150 m, so offsets
+  // stay small but staggered in height/azimuth to keep plates apart.
+  GaleBase: [0, 60, 0],
+  Rocknest: [-150, 110, 40],
+  JohnKleinCumberland: [110, 190, -20],
+  Shaler: [-150, 130, -110],
+  Departure: [140, 380, 90],
 };
 // Mobile (lk > 1): wider world offsets so the screen-space labels of the two
 // ridges (~20 m apart in reality) do not collide; desktop offsets unchanged.
@@ -25,18 +32,23 @@ const LABEL_OFFSET_MOBILE = {
   Depot: [-180, 200, 0],
   Wildcat: [-450, 430, 240],
   Skinner: [450, 560, -240],
+  GaleBase: [0, 60, 0],
+  Rocknest: [-160, 170, 40],
+  JohnKleinCumberland: [160, 260, -30],
+  Shaler: [-130, 350, -90],
+  Departure: [130, 440, 90],
 };
 
 function markerColor(s, dropped, visited) {
-  if (s.id === 'Depot') return '#ffffff';
+  if (s.id === 'Depot' || s.id === 'GaleBase') return '#ffffff';
   if (dropped) return '#cc3333';
   if (visited) return '#44cc66';
   if (s.id === 'Skinner') return '#2dd4bf';
   return '#ffb02e';
 }
 
-function Terrain({ hm }) {
-  const texture = useLoader(THREE.TextureLoader, '/layers/ortho_3d.jpg');
+function Terrain({ hm, region }) {
+  const texture = useLoader(THREE.TextureLoader, region === 'gale' ? '/layers/gale/ortho_3d.jpg' : '/layers/ortho_3d.jpg');
   const geometry = useMemo(() => {
     const { nx, ny, dx, min } = hm;
     const pos = new Float32Array(nx * ny * 3);
@@ -125,26 +137,26 @@ function legPoints(hm, a, b) {
   return pts;
 }
 
-function StationMarker({ hm, s, dropped, visited, lk }) {
+function StationMarker({ hm, s, dropped, visited, lk, ms = 1 }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
   // Short map labels only; caveats/disclaimers live in the left panel card.
-  const name = s.id === 'Depot' ? 'Base' : s.name;
+  const name = (s.id === 'Depot' || s.id === 'GaleBase') ? 'Base' : (s.short || s.name);
   const label = name + (dropped ? ' - LOST' : '');
   const base = (lk > 1 && LABEL_OFFSET_MOBILE[s.id]) || LABEL_OFFSET[s.id] || [0, 150, 0];
   const off = base.map(v => v * lk);
   return (
     <group position={[x, y, z]}>
       {/* thin neutral stem so it never reads as part of the cyan route */}
-      <mesh position={[0, 45, 0]}>
-        <cylinderGeometry args={[1.5, 1.5, 90, 6]} />
+      <mesh position={[0, 45 * ms, 0]}>
+        <cylinderGeometry args={[1.5 * ms, 1.5 * ms, 90 * ms, 6]} />
         <meshBasicMaterial color="#94a3b8" transparent opacity={0.45} />
       </mesh>
-      <mesh position={[0, 95, 0]}>
-        <sphereGeometry args={[20, 16, 16]} />
+      <mesh position={[0, 95 * ms, 0]}>
+        <sphereGeometry args={[20 * ms, 16, 16]} />
         <meshBasicMaterial color={color} />
       </mesh>
-      <Line points={[[0, 100, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
+      <Line points={[[0, 100 * ms, 0], off]} color={color} lineWidth={1} transparent opacity={0.7} />
       {/* Screen-space label: constant size at any zoom, light text with a
           thick dark outline so it stays readable over bright or dark terrain. */}
       <Html position={off} zIndexRange={[40, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, calc(-100% - 10px))' }}>
@@ -170,22 +182,34 @@ function SepNote({ hm, a, b, lk }) {
   );
 }
 
-function Scene({ hm, stations, plan, focus, lk }) {
+function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
   const visitedIds = plan.visitedLegs.map(l => l.to);
   const legs = plan.visitedLegs.concat(plan.sim.legs);
-  const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : byId.Depot;
+  // Marker size scales with route spread so fixed-size spheres don't
+  // swallow a compact cluster (Gale ~150 m across vs Jezero ~700 m).
+  let spread = 0;
+  const pos = {};
+  for (const s of stations) if (s.lat != null) pos[s.id] = stationPos(hm, s);
+  const ids = Object.keys(pos);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = pos[ids[i]], c = pos[ids[j]];
+    spread = Math.max(spread, Math.hypot(a[0] - c[0], a[2] - c[2]));
+  }
+  const ms = Math.min(1, Math.max(0.15, spread / 700));
+  const baseId = (plan.sim.legs[0] && plan.sim.legs[0].from) || 'Depot';
+  const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : byId[baseId];
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[-3200, 2100, -900]} intensity={2.1} />
-      <Terrain hm={hm} />
+      <Terrain hm={hm} region={region} />
       {legs.map((leg, k) => (
         <Line key={'leg' + k} points={legPoints(hm, byId[leg.from], byId[leg.to])}
           color="#22d3ee" lineWidth={2.5}
-          dashed={leg.to === 'Depot' && k > 0} dashSize={18} gapSize={12} />
+          dashed={leg.to === baseId && k > 0} dashSize={18} gapSize={12} />
       ))}
       {droppedIds.map(id => (
         <Line key={'drop' + id} points={legPoints(hm, lastVisited, byId[id])}
@@ -194,30 +218,31 @@ function Scene({ hm, stations, plan, focus, lk }) {
       {stations.filter(s => s.lat != null).map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
-        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} />;
+        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} ms={ms} />;
       })}
-      <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />
+      {byId.Wildcat && byId.Skinner && <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />}
       <OrbitControls makeDefault target={focus}
-        maxPolarAngle={1.45} minDistance={150} maxDistance={12000}
+        maxPolarAngle={1.45} minDistance={minDist} maxDistance={12000}
         enableDamping dampingFactor={0.08} />
     </>
   );
 }
 
-export default function Terrain3D({ stations, plan }) {
+export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot' }) {
   const [hm, setHm] = useState(null);
   useEffect(() => {
-    fetch('/data/heightmap.json').then(r => r.json()).then(d => {
+    setHm(null);
+    fetch(region === 'gale' ? '/data/heightmap_gale.json' : '/data/heightmap.json').then(r => r.json()).then(d => {
       let min = Infinity;
       for (const row of d.values) for (const v of row) if (v !== null && v < min) min = v;
       setHm({ ...d, min });
     });
-  }, []);
+  }, [region]);
 
   // Default framing centers on the route stops (Wildcat, Skinner) so
   // the traverse fills the view, not the middle of the whole crop.
-  const { camPos, focus, k } = useMemo(() => {
-    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1 };
+  const { camPos, focus, k, minDist } = useMemo(() => {
+    if (!hm) return { camPos: [600, 2100, 3300], focus: [0, 60, 0], k: 1, minDist: 150 };
     // Frame all stops so Base on the floor and the ridge stops
     // are both visible; oblique ~35 deg elevation keeps the relief readable
     // instead of flattening to a top-down map.
@@ -230,21 +255,31 @@ export default function Terrain3D({ stations, plan }) {
     cx /= routable.length; cy /= routable.length; cz /= routable.length;
     // narrow (portrait/mobile) screens see a thinner horizontal slice - pull back,
     // and scale label anchors by the same factor so screen separation is preserved
-    const k = (typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1;
-    return { camPos: [cx + 1700 * k, cy + 1000 * k, cz + 600 * k], focus: [cx, cy + 20, cz], k };
+    let spread = 0;
+    for (let i = 0; i < routable.length; i++) for (let j = i + 1; j < routable.length; j++) {
+      const a = stationPos(hm, routable[i]), c = stationPos(hm, routable[j]);
+      spread = Math.max(spread, Math.hypot(a[0] - c[0], a[2] - c[2]));
+    }
+    // Camera distance scales with the route spread so a compact cluster
+    // (Gale, ~150 m across) fills the view like the Jezero traverse does.
+    const camK = Math.min(1, Math.max(0.12, (spread * 2.4) / 1977));
+    const k = ((typeof window !== 'undefined' && window.innerWidth < window.innerHeight) ? 1.55 : 1) * Math.max(0.15, camK);
+    return { camPos: [cx + 1700 * k, cy + 1000 * k, cz + 600 * k], focus: [cx, cy + 20 * camK, cz], k, minDist: Math.max(40, 150 * camK) };
   }, [hm, stations]);
 
-  if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">Loading 3D terrain (USGS 20m DTM)...</div>;
+  if (!hm) return <div className="h-full w-full flex items-center justify-center text-cyan-200 font-mono text-xs">{region === 'gale' ? 'Loading 3D terrain (USGS Gale DEM 1 m, decimated to 2 m)...' : 'Loading 3D terrain (USGS 20m DTM)...'}</div>;
 
   return (
     <div className="relative h-full w-full">
       <Canvas camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
         style={{ background: '#0a0e17' }} dpr={[1, 1.5]}>
-        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} />
+        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} region={region} minDist={minDist} />
       </Canvas>
       <div className="absolute bottom-1 left-1 z-[1000] pointer-events-none bg-[#0d1420cc] border border-cyan-900 rounded px-2 py-1 text-[9px] leading-tight text-gray-300 max-w-[260px]">
-        3D Terrain: Visual representation of 20m DTM grid. Not a navigational surface.
-        <br />Vertical exaggeration x{VE} (display only). Texture: CTX ortho (grayscale).
+        {region === 'gale'
+          ? '3D Terrain: Visual representation of the 2 m grid decimated from the USGS MSL Gale DEM Mosaic 1 m v3. Not a navigational surface.'
+          : '3D Terrain: Visual representation of 20m DTM grid. Not a navigational surface.'}
+        <br />Vertical exaggeration x{VE} (display only). Texture: {region === 'gale' ? 'HiRISE LRGB ortho (grayscale).' : 'CTX ortho (grayscale).'}
       </div>
     </div>
   );

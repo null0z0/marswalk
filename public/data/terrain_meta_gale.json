@@ -1,0 +1,22 @@
+{
+ "elevMin": -4523.0,
+ "elevMax": -4491.2,
+ "slopeMaxDeg": 37.1,
+ "contourIntervalM": 10.0,
+ "gridM": 2.0,
+ "cells": [
+  949,
+  919
+ ],
+ "bounds": [
+  [
+   -4.6195103,
+   137.4180018
+  ],
+  [
+   -4.5885021,
+   137.4500222
+  ]
+ ],
+ "source": "Derived from the app elevation grid (public/data/heightmap_gale.json), itself built from the USGS MSL Gale DEM Mosaic 1 m v3 (decimated to 2 m). Derived views of the same data, not independent measurements."
+}

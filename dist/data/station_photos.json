@@ -1,14 +1,54 @@
 {
- "wildcat": {
-  "sol": 502,
-  "imageid": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
-  "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00502/ids/edr/browse/zcam/ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ01_1200.jpg",
-  "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. Mastcam-Z is a pair of cameras located high on the rover's mast.\n\nThis image was acquired on July 19, 2022 (Sol 502)"
- },
- "skinner": {
-  "sol": 477,
-  "imageid": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
-  "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00477/ids/edr/browse/zcam/ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ01_1200.jpg",
-  "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. This image was acquired on June 23, 2022 (Sol 477)."
- }
+  "wildcat": {
+    "sol": 502,
+    "imageid": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
+    "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00502/ids/edr/browse/zcam/ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ01_1200.jpg",
+    "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. Mastcam-Z is a pair of cameras located high on the rover's mast.\n\nThis image was acquired on July 19, 2022 (Sol 502)"
+  },
+  "skinner": {
+    "sol": 477,
+    "imageid": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
+    "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00477/ids/edr/browse/zcam/ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ01_1200.jpg",
+    "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. This image was acquired on June 23, 2022 (Sol 477)."
+  },
+  "shuyak": {
+    "sol": 565,
+    "imageid": "ZL0_0565_0717112266_568EBY_N0290000ZCAM07115_1100LMJ",
+    "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00565/ids/edr/browse/zcam/ZL0_0565_0717112266_568EBY_N0290000ZCAM07115_1100LMJ01_1200.jpg",
+    "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. Mastcam-Z is a pair of cameras located high on the rover's mast.\n\nThis image was acquired on Sept. 22, 2022 (Sol 565) at the local mean solar time of 16:21:34."
+  },
+  "mageik": {
+    "sol": 609,
+    "imageid": "ZL0_0609_0721008552_410EBY_N0301096ZCAM03478_1100LMJ",
+    "url": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/00609/ids/edr/browse/zcam/ZL0_0609_0721008552_410EBY_N0301096ZCAM03478_1100LMJ01_1200.jpg",
+    "caption": "NASA's Mars Perseverance rover acquired this image using its Left Mastcam-Z camera. Mastcam-Z is a pair of cameras located high on the rover's mast.\n\nThis image was acquired on Nov. 6, 2022 (Sol 609) at the local mean solar time of 13:42:20."
+  },
+  "rocknest": {
+    "sol": 59,
+    "imageid": "0059ML0002690010102306E01",
+    "mission": "msl",
+    "url": "https://mars.jpl.nasa.gov/msl-raw-images/msss/00059/mcam/0059ML0002690010102306E01_DXXX.jpg",
+    "caption": "Curiosity Mastcam left frame, sol 59. Wheel and crusty/rocky surface at the Rocknest sand patch area. Same sol as the station's waypoint record."
+  },
+  "shaler": {
+    "sol": 120,
+    "imageid": "0120ML0007520010103767E01",
+    "mission": "msl",
+    "url": "https://mars.jpl.nasa.gov/msl-raw-images/msss/00120/mcam/0120ML0007520010103767E01_DXXX.jpg",
+    "caption": "Curiosity Mastcam left frame, sol 120. Layered outcrop imaged from the rover's recorded sol-120 position (the Shaler viewpoint record)."
+  },
+  "drillsites": {
+    "sol": 182,
+    "imageid": "0182ML0007400000105276E01",
+    "mission": "msl",
+    "url": "https://mars.jpl.nasa.gov/msl-raw-images/msss/00182/mcam/0182ML0007400000105276E01_DXXX.jpg",
+    "caption": "Curiosity Mastcam left frame, sol 182. Veined, drilled mudstone at the John Klein / Cumberland parking (MSL site 6, waypoint records sols 166-317)."
+  },
+  "departure": {
+    "sol": 324,
+    "imageid": "0324ML0013150010107838E01",
+    "mission": "msl",
+    "url": "https://mars.jpl.nasa.gov/msl-raw-images/msss/00324/mcam/0324ML0013150010107838E01_DXXX.jpg",
+    "caption": "Curiosity Mastcam left frame, sol 324. Rocky terrain at the start of the Mount Sharp trek; same sol as the departure waypoint record."
+  }
 }

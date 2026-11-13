@@ -1,0 +1,47 @@
+{
+  "delta": {
+    "label": "Jezero - Delta Front",
+    "blurb": "Wildcat Ridge, Skinner Ridge and Kukaklek (Hidden Harbor) - the current Perseverance delta-front sampling area.",
+    "base": "Depot",
+    "stops": [
+      "Wildcat",
+      "Skinner",
+      "Kukaklek"
+    ],
+    "priorities": {
+      "Wildcat": 1,
+      "Skinner": 2,
+      "Kukaklek": 3
+    }
+  },
+  "amalik": {
+    "label": "Jezero - Amalik outcrops",
+    "blurb": "Shuyak and Mageik sampling stops at the Amalik outcrop - same delta-front unit (NHjf2) as the Delta Front scenario: different samples and route geometry, not a different environment.",
+    "base": "Depot",
+    "stops": [
+      "Shuyak",
+      "Mageik"
+    ],
+    "priorities": {
+      "Shuyak": 1,
+      "Mageik": 2
+    }
+  },
+  "gale": {
+    "label": "Gale - Yellowknife Bay",
+    "blurb": "Rocknest, the Shaler viewpoint, the John Klein & Cumberland drill sites and the sol-324 departure - Curiosity's Yellowknife Bay campaign inside Gale crater. Geometric planning demo only.",
+    "base": "GaleBase",
+    "stops": [
+      "Rocknest",
+      "Shaler",
+      "JohnKleinCumberland",
+      "Departure"
+    ],
+    "priorities": {
+      "Rocknest": 1,
+      "Shaler": 2,
+      "JohnKleinCumberland": 3,
+      "Departure": 4
+    }
+  }
+}

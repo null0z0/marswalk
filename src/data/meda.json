@@ -1,0 +1,82 @@
+{
+ "477": {
+  "ats": {
+   "1": {
+    "minK": 193.1,
+    "maxK": 252.7
+   },
+   "2": {
+    "minK": 194.7,
+    "maxK": 264.5
+   },
+   "3": {
+    "minK": 194.5,
+    "maxK": 263.4
+   },
+   "4": {
+    "minK": 196.5,
+    "maxK": 257.9
+   },
+   "5": {
+    "minK": 196.1,
+    "maxK": 251.5
+   }
+  },
+  "ps": {
+   "BAROCAP1_PRESSURE": {
+    "minPa": 777.5,
+    "maxPa": 819.8
+   },
+   "BAROCAP2_PRESSURE": {
+    "minPa": 766.8,
+    "maxPa": 809.9
+   },
+   "BAROCAP3_PRESSURE": {
+    "minPa": 767.0,
+    "maxPa": 809.8
+   }
+  },
+  "atsRows": 30956,
+  "psRows": 30328
+ },
+ "502": {
+  "ats": {
+   "1": {
+    "minK": 188.6,
+    "maxK": 257.0
+   },
+   "2": {
+    "minK": 190.3,
+    "maxK": 249.5
+   },
+   "3": {
+    "minK": 191.3,
+    "maxK": 259.5
+   },
+   "4": {
+    "minK": 194.4,
+    "maxK": 270.8
+   },
+   "5": {
+    "minK": 193.4,
+    "maxK": 257.1
+   }
+  },
+  "ps": {
+   "BAROCAP1_PRESSURE": {
+    "minPa": 779.8,
+    "maxPa": 818.8
+   },
+   "BAROCAP2_PRESSURE": {
+    "minPa": 770.0,
+    "maxPa": 809.3
+   },
+   "BAROCAP3_PRESSURE": {
+    "minPa": 770.0,
+    "maxPa": 809.1
+   }
+  },
+  "atsRows": 39432,
+  "psRows": 38946
+ }
+}

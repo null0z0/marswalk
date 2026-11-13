@@ -1,7 +1,13 @@
-export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
+import stations from '../data/stations.json';
+const SHORT = Object.fromEntries(stations.map(x => [x.id, x.short || (x.id === 'Depot' ? 'Base' : x.name.split(' ')[0])]));
+const nm = id => id === undefined ? '' : (SHORT[id] || id);
+
+export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNote = 'elevation grid', planA = null, onPinA = null, onClearA = null }) {
+  const routeLegs = plan.visitedLegs.concat(plan.sim.legs);
+  const routeKm = routeLegs.reduce((a, l) => a + l.metrics.dist, 0) / 1000;
+  const routeAsc = routeLegs.reduce((a, l) => a + l.metrics.asc, 0);
   const total = plan.elapsed + plan.sim.total;
   const fits = total <= windowMin;
-  const nm = id => id === 'Depot' ? 'Base' : id;
   const objTotal = plan.visitedLegs.length + plan.kept.length + plan.dropped.length;
   let clock = 0;
   return (
@@ -23,7 +29,7 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
             return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(done @ {l.paceUsed.toFixed(1)})</div></td></tr>;
           })}
           {plan.sim.legs.map((l, i) => {
-            const dwellPart = l.to === 'Depot' ? 0 : dwellMin;
+            const dwellPart = l.to === (plan.baseId || 'Depot') ? 0 : dwellMin;
             clock += l.metrics.minutes + dwellPart;
             return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(end {Math.round(clock)})</div></td></tr>;
           })}
@@ -37,7 +43,26 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
         </div>
       )}
       {plan.infeasible && <div className="mt-1 text-red-400 font-bold">INFEASIBLE: must-have stations exceed the remaining window by {Math.round(plan.shortfall)} min. Increase the window or change assumptions - no station was silently dropped.</div>}
-      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on horizontal straight-line distance between waypoints (geometric, waypoint-derived); heights and ascent from the 20m DTM (nearest-cell samples every 10m along each straight segment; not a surveyed path; 20m is grid spacing, not a vertical-accuracy guarantee; geometry only - no human-safety or walkability claim).</div>
+      {onPinA && (
+        <div className="mt-2 pt-1 border-t border-cyan-900">
+          {!planA ? (
+            <button onClick={onPinA} className="px-2 py-0.5 bg-[#0d1420] border border-cyan-900 rounded text-cyan-300 text-[10px]">Pin as Plan A (compare)</button>
+          ) : (
+            <div className="text-[10px] font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-400 font-bold">A/B compare</span>
+                <button onClick={onClearA} className="text-gray-500 underline">clear A</button>
+              </div>
+              <div>A: {Math.round(planA.total)} min, {planA.km.toFixed(2)} km, +{Math.round(planA.asc)} m ascent, {planA.kept} objectives kept{planA.dropped.length ? ` (${planA.dropped.join(', ')} deferred)` : ''}</div>
+              <div>B (current): {Math.round(total)} min, {routeKm.toFixed(2)} km, +{Math.round(routeAsc)} m ascent, {plan.visitedLegs.length + plan.kept.length} objectives kept{plan.dropped.length ? ` (${plan.dropped.map(d => SHORT[d.id] || d.name).join(', ')} deferred)` : ''}</div>
+              <div className={total <= planA.total ? 'text-green-400' : 'text-amber-400'}>
+                {total === planA.total ? 'Same total time' : `B is ${Math.abs(Math.round(total - planA.total))} min ${total < planA.total ? 'faster' : 'slower'} than A`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on horizontal straight-line distance between waypoints (geometric, waypoint-derived); heights and ascent from the {dtmNote}; grid spacing is not a vertical-accuracy guarantee; geometry only - no human-safety or walkability claim.</div>
     </div>
   );
 }

@@ -52,6 +52,7 @@ for key, prof in legs.items():
 # DTM is a 20 m grid, so a station elevation is its containing cell's value).
 for sid, s in stations.items():
     if s['lat'] is None: continue
+    if s.get('region', 'jezero') != 'jezero': continue  # Gale stations checked in section 7 against the Gale DEM
     mx, my = to_m(s['lon'], s['lat'])
     elev = dtm_h(mx, my)
     vals = []
@@ -82,7 +83,9 @@ for sid, (path, sol) in SRC.items():
 # features and sols per the NASA samples catalog, science.nasa.gov).
 PARKED = [('data_raw/waypoints_2022-07-19.json', 477, 495, 'sol-477 (Skinner; Swift Run 490, Skyland 495)'),
           ('data_raw/waypoints_2022-12-23.json', 502, 516, 'sol-502 (Wildcat; Hazeltop 509, Bearwallow 516)'),
-          ('data_raw/waypoints_2022-12-23.json', 629, 631, 'sol-629 (Kukaklek; Kukaklek 631)')]
+          ('data_raw/waypoints_2022-12-23.json', 629, 631, 'sol-629 (Kukaklek; Kukaklek 631)'),
+          ('data_raw/waypoints_2022-12-23.json', 565, 575, 'sol-565 (Shuyak; Shuyak 575)'),
+          ('data_raw/waypoints_2022-12-23.json', 609, 619, 'sol-609 (Mageik; Mageik 619)')]
 for path, base_sol, last_sample_sol, label in PARKED:
     feats = json.load(open(path))['features']
     others = sorted({f['properties']['sol'] for f in feats
@@ -103,9 +106,36 @@ tf = Transformer.from_crs('+proj=longlat +R=3396190 +no_defs', '+proj=tmerc +lat
 shp = [wkb.loads(bytes(g)) for g in geoms]
 for sid, s in stations.items():
     if s['lat'] is None: continue
+    if s.get('region', 'jezero') != 'jezero': continue  # no SIM 3464 polygon claim for Gale
     x, y = tf.transform(s['lon'], s['lat']); p = Point(x, y)
     hit = next(((fdata[idx['name']][i], fdata[idx['symbol']][i]) for i, g in enumerate(shp) if g.contains(p)), None)
     check(f'{sid} unit label == SIM 3464 polygon', hit is not None and s['unit'].startswith(hit[1] or ''), f'{hit}')
+
+# 6g. Gale stations: coordinates == MSL waypoint records; elevations == Gale heightmap
+GALE_SRC = {'GaleBase': 59, 'Rocknest': 59, 'Shaler': 120, 'JohnKleinCumberland': 166, 'Departure': 324}
+msl = json.load(open('data_raw/MSL_waypoints.json'))['features']
+hmg = json.load(open('public/data/heightmap_gale.json'))
+def gale_h(mx, my):
+    i = int(round((mx - hmg['x0']) / hmg['dx'])); j = int(round((hmg['y0'] - my) / hmg['dx']))
+    return hmg['values'][j][i]
+for sid, sol in GALE_SRC.items():
+    recs = [f for f in msl if f['properties'].get('sol') == sol]
+    pr = recs[-1]['properties']; s = stations[sid]
+    ok = abs(pr['lat'] - s['lat']) <= 5e-7 and abs(pr['lon'] - s['lon']) <= 5e-7
+    check(f'{sid} coordinate == MSL waypoint record sol {sol}', ok, f"({pr['lat']:.7f}, {pr['lon']:.7f})")
+    mx, my = to_m(s['lon'], s['lat'])
+    g = gale_h(mx, my)
+    check(f'{sid} elevation inside Gale heightmap window', g is not None, f'{g} m')
+# legs_gale.json: recompute every 10 m sample from the Gale heightmap
+glegs = json.load(open('public/data/legs_gale.json'))['legs']
+for key, prof in glegs.items():
+    a, b = key.split('|')
+    ax, ay = to_m(stations[a]['lon'], stations[a]['lat']); bx, by = to_m(stations[b]['lon'], stations[b]['lat'])
+    dist = math.hypot(bx - ax, by - ay)
+    n = max(1, round(dist / 10))
+    recomputed = [[round(k / n * dist, 2), gale_h(ax + (bx - ax) * k / n, ay + (by - ay) * k / n)] for k in range(n + 1)]
+    ok = len(recomputed) == len(prof) and all(abs(p1[0] - p2[0]) < 0.011 and abs(p1[1] - p2[1]) < 0.011 for p1, p2 in zip(recomputed, prof))
+    check(f'gale {key}: every 10m sample matches Gale heightmap recompute', ok, f'{len(prof)} samples, dist {prof[-1][0]} m')
 
 # 6. Kodiak removed from all app data (no verifiable coordinate; user directive 2026-11-13)
 check('Kodiak absent from stations', 'Kodiak' not in stations)
@@ -115,13 +145,25 @@ check('Kodiak absent from photos', 'kodiak' not in json.load(open('public/data/s
 # 7. every image has a resolvable NASA source URL; shipped file matches NASA bytes
 photos = json.load(open('public/data/station_photos.json'))
 for name, ph in photos.items():
-    api = f"https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json&sol={ph['sol']}&num=500"
-    imgs = json.load(urllib.request.urlopen(api)).get('images', [])
-    hit = next((im for im in imgs if im['imageid'].startswith(ph['imageid'])), None)
-    ok = hit is not None and hit['sol'] == ph['sol'] and hit['camera']['filter_name'] == 'ZCAM_L0_RGB'
-    check(f'{name}: imageid/sol/camera verified in NASA raw-images API', ok, hit['title'] if hit else 'NOT FOUND')
-    if not hit: fails.append(name); continue
-    page = f"https://mars.nasa.gov/mars2020/multimedia/raw-images/{hit['imageid']}"
+    if ph.get('mission') == 'msl':
+        api = ("https://mars.nasa.gov/api/v1/raw_image_items/?order=sol+asc&condition_1=msl:mission"
+               f"&condition_2={ph['sol']}:sol:gte&condition_3={ph['sol']}:sol:lte"
+               "&condition_4=MAST_LEFT:instrument:eq&per_page=100")
+        items = json.load(urllib.request.urlopen(api)).get('items', [])
+        base = ph['imageid'].replace('E01', 'I01')
+        hit = next((im for im in items if im['imageid'] in (ph['imageid'] + '_DXXX', base + '_DXXX')), None)
+        ok = hit is not None and hit['sol'] == ph['sol']
+        check(f'{name}: imageid/sol/camera verified in NASA raw-images API', ok, f"MSL sol {hit['sol']} {hit['instrument']}" if hit else 'NOT FOUND')
+        if not hit: fails.append(name); continue
+        page = f"https://mars.nasa.gov/raw_images/{hit['id']}"
+    else:
+        api = f"https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json&sol={ph['sol']}&num=500"
+        imgs = json.load(urllib.request.urlopen(api)).get('images', [])
+        hit = next((im for im in imgs if im['imageid'].startswith(ph['imageid'])), None)
+        ok = hit is not None and hit['sol'] == ph['sol'] and hit['camera']['filter_name'] == 'ZCAM_L0_RGB'
+        check(f'{name}: imageid/sol/camera verified in NASA raw-images API', ok, hit['title'] if hit else 'NOT FOUND')
+        if not hit: fails.append(name); continue
+        page = f"https://mars.nasa.gov/mars2020/multimedia/raw-images/{hit['imageid']}"
     try:
         r = urllib.request.urlopen(page)
         check(f'{name}: source page resolves', r.status == 200, page)
