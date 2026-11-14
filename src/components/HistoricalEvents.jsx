@@ -28,23 +28,23 @@ const srcDomain = (url) => {
 
 function EventCard({ ev }) {
   return (
-    <details className="border border-gray-800 rounded bg-[#0d1420]/60 px-1.5 py-1">
-      <summary className="cursor-pointer select-none text-[10px] text-gray-200">
+    <details className="disclosure">
+      <summary className="text-xs text-slate-200">
         <span className="text-cyan-400">{TYPE_LABEL[ev.type] || ev.type}</span>
-        {' - '}{fmtDate(ev.date_utc)}{ev.sol != null ? ` (sol ${ev.sol}, ${ev.sol_mission})` : ` (${ev.sol_mission})`}
+        {' — '}{fmtDate(ev.date_utc)}{ev.sol != null ? ` (sol ${ev.sol}, ${ev.sol_mission})` : ` (${ev.sol_mission})`}
       </summary>
-      <div className="mt-1 space-y-1 text-[10px] text-gray-300 leading-snug">
-        {ev.date_note && <div className="text-gray-500">{ev.date_note}</div>}
+      <div className="disclosure-body text-xs text-slate-300 space-y-1.5 leading-normal">
+        {ev.date_note && <div className="text-slate-400">{ev.date_note}</div>}
         <div>{ev.summary}</div>
-        <div className="text-gray-500">Where: {ev.location}</div>
-        <div className="text-gray-500">How we know: {ev.instruments.join(', ')} - {ev.status}.</div>
+        <div className="text-slate-400">Where: {ev.location}</div>
+        <div className="text-slate-400">How we know: {ev.instruments.join(', ')} — {ev.status}.</div>
         {ev.estimated_fields && ev.estimated_fields.length > 0 && (
-          <div className="text-amber-300/80">Estimated (marked ~, not measured): {ev.estimated_fields.join('; ')}.</div>
+          <div className="text-amber-300">Estimated (marked ~, not measured): {ev.estimated_fields.join('; ')}.</div>
         )}
-        <div>
+        <div className="pt-1">
           <a href={ev.source_url} target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all">{srcDomain(ev.source_url)}</a>
           {ev.secondary_source_url && <> · <a href={ev.secondary_source_url} target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all">{srcDomain(ev.secondary_source_url)}</a></>}
-          <span className="text-gray-600"> · {ev.credit}</span>
+          <span className="text-slate-500"> · {ev.credit}</span>
         </div>
       </div>
     </details>
@@ -62,14 +62,14 @@ function MedaCard({ sol }) {
   const pMax = Math.max(...Object.values(d.ps).map(s => s.maxPa));
   const c = (k) => (k - 273.15).toFixed(1);
   return (
-    <details className="border border-gray-800 rounded bg-[#0d1420]/60 px-1.5 py-1">
-      <summary className="cursor-pointer select-none text-[10px] text-gray-200">
-        <span className="text-cyan-400">Recorded weather (MEDA)</span>{' - '}sol {sol}, Mars 2020
+    <details className="disclosure">
+      <summary className="text-xs text-slate-200">
+        <span className="text-cyan-400">Recorded weather (MEDA)</span>{' — '}sol {sol}, Mars 2020
       </summary>
-      <div className="mt-1 space-y-1 text-[10px] text-gray-300 leading-snug">
-        <div>Air temperature {c(tMin)} to {c(tMax)} C across the 5 ATS sensors; surface pressure {pMin.toFixed(1)}-{pMax.toFixed(1)} Pa across BAROCAP1-3.</div>
-        <div className="text-gray-500">Where: at the rover (Perseverance) on that sol - a point record at that place and time, not conditions anywhere else or any other time.</div>
-        <div className="text-gray-500">How we know: MEDA PDS calibrated products, {d.atsRows.toLocaleString()} temperature + {d.psRows.toLocaleString()} pressure rows parsed, no quality filtering beyond parsing.</div>
+      <div className="disclosure-body text-xs text-slate-300 space-y-1.5 leading-normal">
+        <div>Air temperature {c(tMin)} to {c(tMax)} &deg;C across 5 ATS sensors; surface pressure {pMin.toFixed(1)}–{pMax.toFixed(1)} Pa across BAROCAP1-3.</div>
+        <div className="text-slate-400">Where: at the rover (Perseverance) on that sol — a point record at that place and time.</div>
+        <div className="text-slate-400">How we know: MEDA PDS calibrated products, {d.atsRows.toLocaleString()} temperature + {d.psRows.toLocaleString()} pressure rows parsed.</div>
         <div><a href="https://atmos.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/" target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all">PDS MEDA archive (NMSU)</a></div>
       </div>
     </details>
@@ -82,21 +82,21 @@ export default function HistoricalEvents({ region }) {
   const medaSols = region === 'jezero' ? Object.keys(meda).map(Number).sort() : [];
   return (
     <section className="panel text-xs">
-      <details>
-        <summary className="cursor-pointer select-none">
+      <details className="disclosure">
+        <summary className="text-xs">
           <span className="eyebrow">Recorded natural events</span>
-          <span className="text-[10px] text-gray-500"> {local.length} in this crater + {context.length} elsewhere on Mars{medaSols.length ? ` + ${medaSols.length} recorded-weather sols` : ''}</span>
+          <span className="text-xs text-slate-400 font-mono"> ({local.length} crater + {context.length} Mars)</span>
         </summary>
-        <div className="mt-1.5 space-y-1.5">
-          <div className="text-[9px] text-gray-500 leading-snug border border-gray-800 rounded p-1.5 bg-[#0d1420]/60">
-            Historical archive: what was observed, when, where (crater-level context, no exact map pins) and by which instrument. This is not current weather, not a forecast and not a hazard model; estimated values are marked. Nothing here changes routes or plans.
+        <div className="disclosure-body space-y-2 mt-1">
+          <div className="text-xs text-slate-300 leading-normal border border-cyan-900/40 rounded-lg p-2 bg-[#070d18]/60">
+            Historical archive: what was observed, when, where (crater-level context, no exact pins) and by which instrument. This is not current weather and not a forecast; estimated values are marked.
           </div>
           {medaSols.map(s => <MedaCard key={s} sol={s} />)}
           {local.map(ev => <EventCard key={ev.id} ev={ev} />)}
-          <div className="text-[9px] uppercase tracking-wider text-gray-500 pt-1 border-t border-gray-800">Elsewhere on Mars - context only, NOT at {region === 'gale' ? 'Gale' : 'Jezero'}</div>
+          <div className="eyebrow pt-1.5 border-t border-cyan-900/40">Elsewhere on Mars — context only</div>
           {context.map(ev => <EventCard key={ev.id} ev={ev} />)}
-          <div className="text-[9px] text-gray-600 leading-snug pt-1 border-t border-gray-800 space-y-0.5">
-            {eventsData.bounded_absences.map((a, i) => <div key={i}>- {a}</div>)}
+          <div className="text-xs text-slate-400 leading-normal pt-1.5 border-t border-cyan-900/40 space-y-0.5">
+            {eventsData.bounded_absences.map((a, i) => <div key={i}>— {a}</div>)}
           </div>
         </div>
       </details>

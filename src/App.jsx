@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import MapView from './components/MapView.jsx';
 
 const Terrain3D = lazy(() => import('./components/Terrain3D.jsx'));
@@ -10,6 +10,7 @@ import PlanSummary from './components/PlanSummary.jsx';
 import SolTimeline from './components/SolTimeline.jsx';
 import HistoricalEvents from './components/HistoricalEvents.jsx';
 import ElevationProfile from './components/ElevationProfile.jsx';
+import RoutePointDetails from './components/RoutePointDetails.jsx';
 import MissionBrief from './components/MissionBrief.jsx';
 import GlobalView from './components/GlobalView.jsx';
 import RouteCompare from './components/RouteCompare.jsx';
@@ -189,6 +190,26 @@ export default function App() {
     // null = unroutable (outside coverage / no-data): surfaced as such, never invented
     return legMetrics(activeLegs, abFrom, abTo, paceKmh);
   }, [activeLegs, abFrom, abTo, paceKmh]);
+
+  const abPlan = useMemo(() => {
+    if (!abFrom || !abTo || !abMetrics) return null;
+    return {
+      isTwoPoint: true,
+      baseId: abFrom,
+      visitedLegs: [],
+      sim: {
+        legs: [{
+          from: abFrom,
+          to: abTo,
+          metrics: abMetrics,
+        }],
+        total: abMetrics.minutes,
+      },
+    };
+  }, [abFrom, abTo, abMetrics]);
+
+  const fromStation = useMemo(() => realPlaces.find(s => s.id === abFrom), [realPlaces, abFrom]);
+  const toStation = useMemo(() => realPlaces.find(s => s.id === abTo), [realPlaces, abTo]);
 
   const traverseGraph = useMemo(
     () => (region === 'gale' && roverTrack && roverTrack.segments) ? buildTraverseGraph(roverTrack) : null,
@@ -380,6 +401,74 @@ export default function App() {
   function demoNext() { setDemoStep((s) => (s === null || s >= 2 ? null : s + 1)); }
   function demoOverrun() { recordStop(60); setDemoStep(2); }
 
+  const [toast, setToast] = useState(null);
+  const prevPlanSnapshot = useRef(null);
+
+  const resetView = () => {
+    setMapResetKey((k) => k + 1);
+  };
+
+  const resetPlan = () => {
+    prevPlanSnapshot.current = {
+      abFrom, abTo, customPts, visited, inspectPt, inspectMode,
+      solLimit, mustHaves, priorities, windowMin, dwellMin, paceKmh,
+      roundTrip, baseOverride, layers,
+    };
+
+    setAbFrom(null);
+    setAbTo(null);
+    setCustomPts({ jezero: [], gale: [] });
+    setVisited([]);
+    setInspectPt(null);
+    setInspectMode(false);
+    setSolLimit(null);
+    setMustHaves([]);
+    setPriorities(scenarios[scenarioId]?.priorities || scenarios.delta.priorities);
+    setWindowMin(300);
+    setDwellMin(60);
+    setPaceKmh(1.0);
+    setRoundTrip(false);
+    setBaseOverride(null);
+    setLayers({
+      geology: true, roverRoute: false, roverStops: false,
+      elevRamp: false, hillshade: false, slope: false, contours: false, crismVna: false, overlayOpacity: 0.55,
+      plannedRoute: true, droppedLegs: true, objectives: true, baseMarker: true, userWps: true, events: true,
+    });
+    setMapResetKey((k) => k + 1);
+
+    setToast({
+      message: 'Plan cleared.',
+      onUndo: () => {
+        if (prevPlanSnapshot.current) {
+          const s = prevPlanSnapshot.current;
+          setAbFrom(s.abFrom);
+          setAbTo(s.abTo);
+          setCustomPts(s.customPts);
+          setVisited(s.visited);
+          setInspectPt(s.inspectPt);
+          setInspectMode(s.inspectMode);
+          setSolLimit(s.solLimit);
+          setMustHaves(s.mustHaves);
+          setPriorities(s.priorities);
+          setWindowMin(s.windowMin);
+          setDwellMin(s.dwellMin);
+          setPaceKmh(s.paceKmh);
+          setRoundTrip(s.roundTrip);
+          setBaseOverride(s.baseOverride);
+          setLayers(s.layers);
+          prevPlanSnapshot.current = null;
+          setToast(null);
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   return (
     <div className={`app-shell${viewMode === 'global' ? ' is-global' : ''}`}>
       <a className="skip-link" href="#workspace">Skip to mission map</a>
@@ -437,17 +526,17 @@ export default function App() {
           className={`rail rail--objectives rail-scroll${drawerOpen ? ' is-open' : ''}`}
           aria-label="Mission and objectives"
         >
-          <section className="panel">
+          <section className="panel text-xs space-y-2">
             <div className="eyebrow">Region & mission</div>
-            <select className="w-full bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
+            <select aria-label="Select mission scenario" className="station-select w-full"
               value={scenarioId} onChange={e => switchScenario(e.target.value)}>
               {Object.entries(scenarios).map(([id, sc]) => <option key={id} value={id} disabled={!!sc.disabled}>{sc.label}{sc.disabled ? ' (in build)' : ''}</option>)}
             </select>
-            <div className="text-[10px] text-gray-400 leading-snug mt-1">{scenario.blurb}</div>
-            <details className="mt-1">
-              <summary className="cursor-pointer text-gray-500 text-[9px] select-none">coverage & data limits</summary>
-              <div className="text-[9px] text-gray-500 leading-snug pt-1">
-                Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
+            <div className="text-xs text-slate-300 leading-normal">{scenario.blurb}</div>
+            <details className="disclosure mt-1">
+              <summary className="text-xs">Coverage & data limits</summary>
+              <div className="disclosure-body text-xs text-slate-300 leading-normal">
+                Supported coverage: dashed frame on map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected.
               </div>
             </details>
           </section>
@@ -466,15 +555,18 @@ export default function App() {
             onRemoveWaypoint={removeWaypoint}
             onClose={() => setDrawerOpen(false)} />
 
-          <section className="panel">
+          <section className="panel text-xs space-y-2">
             <div className="eyebrow">Your waypoints</div>
-            <div className="text-[10px] text-gray-400 mb-1">Coordinates only - no science objective is invented for them. They are navigation points: always kept on the route.</div>
-            <button onClick={toggleAddMode}
-              className={`w-full px-2 py-1 rounded text-[11px] font-bold ${addMode ? 'bg-cyan-700 text-white' : 'bg-[#101826] border border-cyan-900 text-cyan-300'}`}>
-              {addMode ? 'Click the map to place it… (cancel)' : '+ Add waypoint on map'}
+            <div className="text-xs text-slate-300">Coordinates only — no science objective is attached. Navigation points are always kept on route.</div>
+            <button
+              type="button"
+              onClick={toggleAddMode}
+              className={`btn btn-sm w-full font-bold ${addMode ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              {addMode ? 'Cancel waypoint placement (active)' : '+ Add waypoint on map'}
             </button>
             <CoordinateEntry onAdd={addWaypoint} />
-            {waypointError && <div className="mt-1 text-[10px] text-amber-400">{waypointError}</div>}
+            {waypointError && <div className="text-xs text-amber-400 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">{waypointError}</div>}
           </section>
         </aside>
 
@@ -495,7 +587,8 @@ export default function App() {
                 abGeometry={traverseResult && traverseResult.ok ? traverseResult.pathLatLon : null}
                 abGeometryParts={traverseResult && traverseResult.ok ? traverseResult.pathParts : null}
                 abCompareGeom={appMode === 'route' ? abCompareGeom : null}
-                showPlan={appMode === 'planner'} />
+                showPlan={appMode === 'planner'}
+                resetKey={mapResetKey} />
             </div>
 
             {terrainMounted && (
@@ -517,7 +610,8 @@ export default function App() {
                     plan={plan} region={region} baseId={baseId}
                     mode={appMode === 'route' ? 'route' : 'planner'} abPath={abPath3D} abParts={abParts3D}
                     abCompare={appMode === 'route' ? abCompareGeom : null}
-                    legsProvider={appMode === 'planner' ? activeLegs : null} />
+                    legsProvider={appMode === 'planner' ? activeLegs : null}
+                    resetKey={mapResetKey} />
                 </Suspense>
               </div>
             )}
@@ -528,7 +622,7 @@ export default function App() {
               inert={viewMode === 'global' ? undefined : true }
             >
               {viewMode === 'global' && (
-                <GlobalView onOpenRegion={(r) => { switchScenario(r === 'gale' ? 'gale' : 'delta'); setViewMode('2d'); }} />
+                <GlobalView onOpenRegion={(r) => { switchScenario(r === 'gale' ? 'gale' : 'delta'); setViewMode('2d'); }} resetKey={mapResetKey} />
               )}
             </div>
 
@@ -568,14 +662,25 @@ export default function App() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                className="tool-toggle"
-                onClick={() => setMapResetKey((k) => k + 1)}
-              >
-                <ResetIcon />
-                <span>Reset view</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="tool-toggle"
+                  title="Reset camera and framing to default"
+                  onClick={resetView}
+                >
+                  <ResetIcon />
+                  <span>Reset view</span>
+                </button>
+                <button
+                  type="button"
+                  className="tool-toggle text-amber-300 hover:text-amber-200"
+                  title="Clear all waypoints, visited stops, and route selections"
+                  onClick={resetPlan}
+                >
+                  <span>Reset plan</span>
+                </button>
+              </div>
             </div>
 
             <div className="map-source">
@@ -593,63 +698,132 @@ export default function App() {
             overrunApplied={visited.length > 0 && !!visited[visited.length - 1].overrun}
             onOverrun={() => recordStop(60)}
             onUndoOverrun={() => setVisited(v => (v.length && v[v.length - 1].overrun) ? v.slice(0, -1) : v)}
-            onReset={() => setVisited([])} />}
+            onReset={resetPlan} />}
 
-          <section className="panel text-xs space-y-1.5">
-            <div className="eyebrow">Route between two points</div>
-            <div className="text-[10px] text-gray-500">Pick any two real places (or your own waypoints) - no assumed base, no automatic return. Geometry follows the route model chosen in the map Layers panel.</div>
-            <div className="flex items-center gap-1.5">
-              <select aria-label="Route from" className="flex-1 min-w-0 bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
-                value={abFrom || ''} onChange={e => setAbFrom(e.target.value || null)}>
-                <option value="">From...</option>
-                {realPlaces.filter(s => s.lat != null).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
-              </select>
-              <select aria-label="Route to" className="flex-1 min-w-0 bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
-                value={abTo || ''} onChange={e => setAbTo(e.target.value || null)}>
-                <option value="">To...</option>
-                {realPlaces.filter(s => s.lat != null && s.id !== abFrom).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
-              </select>
+          <section className="panel text-xs space-y-2.5">
+            <div className="eyebrow">Two-point route</div>
+            <div className="text-xs text-slate-400">
+              Pick any two real places (or your own waypoints) — no assumed base, no automatic return.
             </div>
+
+            <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2 pt-1">
+              <div>
+                <label className="block text-[11px] font-mono text-cyan-400 mb-1">FROM</label>
+                <select aria-label="Route from" className="station-select w-full"
+                  value={abFrom || ''} onChange={e => setAbFrom(e.target.value || null)}>
+                  <option value="">Origin...</option>
+                  {realPlaces.filter(s => s.lat != null).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
+                </select>
+              </div>
+              <div className="text-cyan-400 font-bold pt-4 text-center">→</div>
+              <div>
+                <label className="block text-[11px] font-mono text-cyan-400 mb-1">TO</label>
+                <select aria-label="Route to" className="station-select w-full"
+                  value={abTo || ''} onChange={e => setAbTo(e.target.value || null)}>
+                  <option value="">Destination...</option>
+                  {realPlaces.filter(s => s.lat != null && s.id !== abFrom).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <div className="text-xs text-slate-400 mb-1 font-medium">Route model:</div>
+              <div className="segmented w-full">
+                <button
+                  type="button"
+                  className={`flex-1 justify-center ${routeModel === 'straight' ? 'is-active' : ''}`}
+                  onClick={() => setRouteModel('straight')}
+                >
+                  Straight baseline
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 justify-center ${routeModel === 'leastcost' ? 'is-active' : ''}`}
+                  onClick={() => setRouteModel('leastcost')}
+                >
+                  Least-cost terrain
+                </button>
+              </div>
+            </div>
+
             {region === 'gale' && traverseGraph && (
-              <label className="flex items-start gap-1.5 text-[10px] text-gray-400">
-                <input type="checkbox" className="mt-0.5" checked={followTraverse} onChange={e => setFollowTraverse(e.target.checked)} />
-                <span>Follow Curiosity's recorded drive path (NASA MSL MMGIS traverse). Historical record, not a surveyed or walkable route. Refuses when the record has a gap.</span>
-              </label>)}
+              <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                <input type="checkbox" className="mt-0.5 accent-cyan-400" checked={followTraverse} onChange={e => setFollowTraverse(e.target.checked)} />
+                <span>Follow Curiosity's recorded drive path (NASA MSL MMGIS traverse). Refuses when archive has a gap.</span>
+              </label>
+            )}
+
             {region === 'gale' && traverseGraph && followTraverse && (
-              <label className="flex items-start gap-1.5 text-[10px] text-amber-300/90">
-                <input type="checkbox" className="mt-0.5" checked={allowTraverseConnectors} onChange={e => setAllowTraverseConnectors(e.target.checked)} />
-                <span>Experiment: bridge small archive gaps with synthetic connectors (dashed; NOT recorded drive ground - a routing convenience, not history).</span>
-              </label>)}
+              <label className="flex items-start gap-2 text-xs text-amber-300 cursor-pointer pl-4">
+                <input type="checkbox" className="mt-0.5 accent-amber-400" checked={allowTraverseConnectors} onChange={e => setAllowTraverseConnectors(e.target.checked)} />
+                <span>Experiment: bridge small archive gaps with synthetic connectors (dashed, not recorded drive ground).</span>
+              </label>
+            )}
+
             {region === 'gale' && followTraverse && abFrom && abTo && traverseResult && (
               traverseResult.ok ? (
-                <div className="text-[11px] text-gray-300">
-                  {(traverseResult.distM / 1000).toFixed(2)} km along the recorded drives{traverseResult.syntheticM > 0 ? `, incl. ${Math.round(traverseResult.syntheticM)} m of dashed synthetic gap connectors (not recorded drive ground)` : ''}
-                  <span className="text-gray-500"> (endpoints snap {Math.round(traverseResult.snapFromM)} m / {Math.round(traverseResult.snapToM)} m to the record, limit {SNAP_TOLERANCE_M} m - those straight access hops are not drawn and not part of the distance)</span>
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="chip chip--cyan mono">{(traverseResult.distM / 1000).toFixed(2)} km</span>
+                    <span className="chip chip--green mono">NASA Traverse</span>
+                    {traverseResult.syntheticM > 0 && (
+                      <span className="chip chip--amber mono">+{Math.round(traverseResult.syntheticM)} m synthetic</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400 leading-normal">
+                    Endpoints snap {Math.round(traverseResult.snapFromM)} m / {Math.round(traverseResult.snapToM)} m to record (limit {SNAP_TOLERANCE_M} m).
+                  </div>
                   {traverseResult.reversed === true && (
-                    <div className="text-amber-400 text-[10px]">Against the driven record: Curiosity drove this the other way{traverseResult.solFrom != null && traverseResult.solTo != null ? ` (sol ${traverseResult.solTo} -> ${traverseResult.solFrom})` : ''}. Shown reversed as geometry, not evidence it is drivable in reverse.</div>)}
+                    <div className="text-amber-300 text-xs bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+                      Against driven record: Curiosity drove this the other way{traverseResult.solFrom != null && traverseResult.solTo != null ? ` (sol ${traverseResult.solTo} → ${traverseResult.solFrom})` : ''}.
+                    </div>
+                  )}
                 </div>
               ) : traverseResult.reason === 'snap-too-far' ? (
-                <div className="text-[11px] text-amber-400">Off the recorded path: nearest recorded drives to the two points are {Math.round(Math.min(traverseResult.snapFromM, traverseResult.snapToM))} m and {Math.round(Math.max(traverseResult.snapFromM, traverseResult.snapToM))} m away (limit {traverseResult.toleranceM} m). No path drawn.</div>
+                <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+                  Off recorded path: nearest recorded drives are {Math.round(Math.min(traverseResult.snapFromM, traverseResult.snapToM))} m and {Math.round(Math.max(traverseResult.snapFromM, traverseResult.snapToM))} m away (limit {traverseResult.toleranceM} m). No path drawn.
+                </div>
               ) : traverseResult.reason === 'gap-in-record' ? (
-                <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - {traverseResult.gapM > 0 ? `the archive has a gap of about ${Math.round(traverseResult.gapM)} m here.` : 'the records end at the same spot but do not join (zero-distance archive break).'} No path drawn in strict recorded mode. Opt into the synthetic-connector experiment above to bridge it (dashed, not recorded ground).</div>
+                <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+                  Recorded drives do not connect these points — {traverseResult.gapM > 0 ? `archive has ~${Math.round(traverseResult.gapM)} m gap here.` : 'records break at same spot.'} Enable synthetic connectors above to bridge.
+                </div>
               ) : (
-                <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - the archive has a gap here. No path drawn.</div>
-              ))}
-            {abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) && !traverseResult?.ok && (
-              abMetrics
-                ? <div className="text-[11px] text-gray-300">
-                    {(abMetrics.dist / 1000).toFixed(2)} km - {Math.round(abMetrics.minutes)} min walk{Math.round(abMetrics.asc) > 0 ? ` - +${Math.round(abMetrics.asc)} m up` : ''}
-                    <span className="text-gray-500"> ({routeModel === 'leastcost' ? 'least-cost terrain model' : 'straight-line baseline'}, one-way)</span>
-                  </div>
-                : <div className="text-[11px] text-amber-400">No route: one of these points is outside the elevation data coverage, or the ground in between has no data. We do not guess a path.</div>
+                <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+                  Recorded drives do not connect these points. No path drawn.
+                </div>
+              )
             )}
+
+            {abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) && !traverseResult?.ok && (
+              abMetrics ? (
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="chip chip--cyan mono">{(abMetrics.dist / 1000).toFixed(2)} km</span>
+                    <span className="chip chip--amber mono">{Math.round(abMetrics.minutes)} min walk</span>
+                    {Math.round(abMetrics.asc) > 0 && (
+                      <span className="chip chip--green mono">+{Math.round(abMetrics.asc)} m asc</span>
+                    )}
+                    <span className="chip mono">{routeModel === 'leastcost' ? 'terrain model' : 'straight baseline'}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+                  No route: point is outside elevation coverage, or ground has missing data.
+                </div>
+              )
+            )}
+
             {!followTraverse && (
-              <label className="flex items-start gap-1.5 text-[10px] text-gray-400">
-                <input type="checkbox" className="mt-0.5" checked={compareOn} onChange={e => setCompareOn(e.target.checked)} />
-                <span>Compare both route models: straight baseline vs slope-aware least-cost path between the same endpoints, with profiles and mapped geology. Neither is the shortest, easiest or safest route.</span>
-              </label>)}
+              <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                <input type="checkbox" className="mt-0.5 accent-cyan-400" checked={compareOn} onChange={e => setCompareOn(e.target.checked)} />
+                <span>Compare both route models (straight baseline vs slope-aware least-cost)</span>
+              </label>
+            )}
             {followTraverse && (
-              <div className="text-[9px] text-gray-500">Grid-model comparison is off while following the recorded drive path - the record is historical geometry, not one of the two grid models, and the models are never drawn as a substitute for a refused record.</div>)}
+              <div className="text-xs text-slate-400">
+                Grid-model comparison is disabled while following the recorded drive path.
+              </div>
+            )}
           </section>
 
           {appMode === 'route' && compareOn && abCompare && !followTraverse && (
@@ -658,12 +832,25 @@ export default function App() {
               toName={(realPlaces.find(x => x.id === abTo) || {}).short || abTo} />
           )}
 
-          <section className="panel text-xs space-y-1.5">
+          {appMode === 'route' && (fromStation || toStation) && (
+            <RoutePointDetails fromStation={fromStation} toStation={toStation} />
+          )}
+
+          {appMode === 'route' && abPlan && (
+            <ElevationProfile plan={abPlan} stations={realPlaces} legsData={legs} geojson={region === 'jezero' ? geojson : null} />
+          )}
+
+          <section className="panel text-xs space-y-2">
             <div className="eyebrow">Inspect any point</div>
-            <div className="text-[10px] text-gray-500">Click the map to read what the data actually says at that point: elevation, local slope, mapped geology (Jezero), nearest places and nearest recorded rover evidence. Missing layers are stated as unavailable, never filled in.</div>
-            <button onClick={toggleInspectMode}
-              className={`w-full px-2 py-1 rounded text-[11px] font-bold ${inspectMode ? 'bg-cyan-700 text-white' : 'bg-[#101826] border border-cyan-900 text-cyan-300'}`}>
-              {inspectMode ? 'Click the map to inspect… (cancel)' : 'Inspect a point on the map'}
+            <div className="text-xs text-slate-400 leading-normal">
+              Click the map to read elevation, local slope, mapped geology (Jezero), nearest places and recorded rover evidence.
+            </div>
+            <button
+              type="button"
+              onClick={toggleInspectMode}
+              className={`btn btn-sm w-full font-bold ${inspectMode ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              {inspectMode ? 'Cancel inspection (click active)' : 'Inspect a point on map'}
             </button>
           </section>
           {inspectPt && (
@@ -671,22 +858,43 @@ export default function App() {
               stations={realPlaces} roverTrack={roverTrack} onClear={() => setInspectPt(null)} />
           )}
 
-          {appMode === 'planner' && <section className="panel text-xs space-y-1.5">
-            <div className="eyebrow">Route options</div>
-            <label className="flex items-center gap-2">
-              <span className="text-gray-400">Start at</span>
-              <select className="flex-1 bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-0.5 text-xs text-gray-200"
-                value={baseId} onChange={e => setBaseOverride(e.target.value === scenario.base ? null : e.target.value)}>
-                {scenarioStations.filter(s => s.lat != null).map(s => (
-                  <option key={s.id} value={s.id}>{s.id === scenario.base ? `${s.short || s.name} (recorded site position)` : (s.short || s.name)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-gray-400">
-              <input type="checkbox" checked={roundTrip} onChange={e => setRoundTrip(e.target.checked)} />
-              Return to start{!roundTrip ? <span className="text-amber-400 text-[10px]">- one-way: plan ends at the last stop, no return leg is counted</span> : null}
-            </label>
-          </section>}
+          {appMode === 'planner' && (
+            <section className="panel text-xs space-y-2">
+              <div className="eyebrow">Route options</div>
+              <label className="flex items-center gap-2">
+                <span className="text-slate-400">Start at</span>
+                <select
+                  aria-label="Scenario start location"
+                  className="station-select flex-1"
+                  value={baseId}
+                  onChange={e => setBaseOverride(e.target.value === scenario.base ? null : e.target.value)}
+                >
+                  {scenarioStations.filter(s => s.lat != null).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.id === scenario.base ? `${s.short || s.name} (recorded site position)` : (s.short || s.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={roundTrip}
+                  onChange={e => setRoundTrip(e.target.checked)}
+                  className="accent-cyan-400"
+                />
+                <span>Return to start</span>
+                {!roundTrip && (
+                  <span className="chip chip--amber mono text-xs">One-way</span>
+                )}
+              </label>
+              {!roundTrip && (
+                <div className="text-xs text-amber-300/90 font-mono">
+                  Plan ends at the last stop; no return leg is counted.
+                </div>
+              )}
+            </section>
+          )}
 
           {appMode === 'planner' && <PlanSummary plan={plan} windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh} dtmNote={legs.dtm} routeModel={routeModel}
                 planA={planA} onPinA={pinPlanA} onClearA={() => setPlanA(null)} />}
@@ -698,6 +906,29 @@ export default function App() {
         open={briefOpen}
         onClose={() => setBriefOpen(false)}
       />
+
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center gap-3 bg-[#0d1420]/95 border border-cyan-400 rounded-lg px-4 py-2 text-xs text-white shadow-2xl backdrop-blur-md">
+          <span>{toast.message}</span>
+          {toast.onUndo && (
+            <button
+              type="button"
+              onClick={toast.onUndo}
+              className="px-2.5 py-1 bg-cyan-700 hover:bg-cyan-600 rounded text-xs font-bold text-white shadow"
+            >
+              Undo
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-white text-sm ml-1"
+            aria-label="Close notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -709,13 +940,13 @@ function CoordinateEntry({ onAdd }) {
   const la = parseFloat(lat), lo = parseFloat(lon);
   const valid = Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 360;
   return (
-    <form className="mt-1 flex gap-1 items-center" onSubmit={e => { e.preventDefault(); if (valid) { onAdd(la, lo); setLat(''); setLon(''); } }}>
+    <form className="mt-1 flex gap-1.5 items-center" onSubmit={e => { e.preventDefault(); if (valid) { onAdd(la, lo); setLat(''); setLon(''); } }}>
       <input value={lat} onChange={e => setLat(e.target.value)} placeholder="lat" inputMode="decimal"
-        className="w-1/2 bg-black border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono" />
+        className="station-select w-1/2 font-mono text-xs" />
       <input value={lon} onChange={e => setLon(e.target.value)} placeholder="lon" inputMode="decimal"
-        className="w-1/2 bg-black border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono" />
+        className="station-select w-1/2 font-mono text-xs" />
       <button type="submit" disabled={!valid}
-        className="px-1.5 py-0.5 bg-[#101826] border border-cyan-900 rounded text-cyan-300 text-[10px] disabled:opacity-40">add</button>
+        className="btn btn-primary btn-sm text-xs">add</button>
     </form>
   );
 }

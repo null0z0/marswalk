@@ -28,18 +28,18 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
   const reached = pts.filter(s => s.sol <= N);
   const X = sol => 34 + (sol - range.lo) / Math.max(1, range.hi - range.lo) * 168;
   return (
-    <div className="p-2 bg-[#101826] rounded border border-cyan-900">
-      <h3 className="text-[11px] uppercase tracking-wider text-cyan-400 mb-1">Rover record timeline</h3>
+    <section className="panel text-xs space-y-2">
+      <div className="eyebrow">Rover record timeline</div>
       <div className="flex items-center gap-2">
         <input type="range" min={range.lo} max={range.hi} value={N}
           onChange={e => setSolLimit(+e.target.value >= range.hi ? null : +e.target.value)}
-          className="flex-1 h-1 accent-cyan-400" />
-        <span className="font-mono text-[11px] text-cyan-200 w-14 text-right">sol {N}</span>
+          className="flex-1 accent-cyan-400 cursor-pointer" />
+        <span className="chip chip--cyan mono">sol {N}</span>
       </div>
       <svg viewBox="0 0 220 56" className="w-full mt-1">
         <line x1="30" y1="30" x2="206" y2="30" stroke="#164e63" strokeWidth="1.5" />
-        <text x="30" y="52" fontSize="7" fill="#789">sol {range.lo}</text>
-        <text x="206" y="52" fontSize="7" fill="#789" textAnchor="end">sol {range.hi}</text>
+        <text x="30" y="52" fontSize="7" fill="#94a3b8">sol {range.lo}</text>
+        <text x="206" y="52" fontSize="7" fill="#94a3b8" textAnchor="end">sol {range.hi}</text>
         <line x1={X(N)} y1="12" x2={X(N)} y2="44" stroke="#22d3ee" strokeWidth="1" />
         {(() => {
           // lane assignment: labels sorted by sol take the first of 4 lanes
@@ -67,19 +67,19 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
         })()}
       </svg>
       {solLimit != null && (
-        <div className="text-[9px] mt-0.5">
-          <button onClick={() => setSolLimit(null)} className="text-cyan-400 underline">reset (full archive)</button>
+        <div className="text-xs pt-1">
+          <button type="button" onClick={() => setSolLimit(null)} className="text-cyan-400 hover:text-cyan-300 underline">Reset (full archive)</button>
         </div>
       )}
-      <details className="mt-0.5">
-        <summary className="cursor-pointer text-gray-500 text-[9px] select-none">what this filters</summary>
-        <div className="text-[9px] text-gray-500 pt-0.5 leading-snug">
+      <details className="disclosure mt-1">
+        <summary className="text-xs">What this filters</summary>
+        <div className="disclosure-body text-xs text-slate-300 leading-normal">
           {range.kind === 'positions'
-            ? `Archive sols ${range.lo}-${range.hi}: map shows recorded rover positions up to sol ${N} (${roverTrack.route.filter(p => p[2] <= N).length} of ${roverTrack.route.length} records). Sparse records connected by straight lines - the driven path between records is not in this dataset.`
-            : `Archive sols ${range.lo}-${range.hi}: map shows recorded site stops reached by sol ${N}. Drive polylines in this archive carry no per-segment sol record, so they stay drawn; between stop records the exact whereabouts are not in this dataset.`}
-          {' '}Stop dots are waypoint-record sols. This filters the recorded archive only - the walk plan is unchanged.
+            ? `Archive sols ${range.lo}-${range.hi}: map shows recorded rover positions up to sol ${N} (${roverTrack.route.filter(p => p[2] <= N).length} of ${roverTrack.route.length} records). Sparse records connected by straight lines — the driven path between records is not in this dataset.`
+            : `Archive sols ${range.lo}-${range.hi}: map shows recorded site stops reached by sol ${N}. Drive polylines in this archive carry no per-segment sol record; between stop records exact whereabouts are not in this dataset.`}
+          {' '}Stop dots are waypoint-record sols. This filters the recorded archive only — walk plan is unchanged.
         </div>
       </details>
-    </div>
+    </section>
   );
 }

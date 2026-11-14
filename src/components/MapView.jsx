@@ -55,7 +55,7 @@ function stationIcon(s, dropped, visited, dim = false) {
   return L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8], html: `<div style="${dim ? 'opacity:0.25;' : ''}">${shape ? `<div style="${shape}"></div>` : ''}</div>` });
 }
 
-function FitStations({ stations, maxFitZoom, orthoBounds }) {
+function FitStations({ stations, maxFitZoom, orthoBounds, resetKey = 0 }) {
   const map = useMap();
   useEffect(() => {
     // keep the view inside real imagery: the station cluster sits near the NE
@@ -63,8 +63,8 @@ function FitStations({ stations, maxFitZoom, orthoBounds }) {
     const ob = L.latLngBounds(orthoBounds);
     map.setMaxBounds(ob.pad(0.005));
     const b = L.latLngBounds(stations.filter(s => s.lat != null).map(s => [s.lat, s.lon]));
-    map.fitBounds(b.pad(0.6), { animate: false, maxZoom: maxFitZoom });
-  }, [map, stations, maxFitZoom, orthoBounds]);
+    map.fitBounds(b.pad(0.6), { animate: resetKey > 0, maxZoom: maxFitZoom });
+  }, [map, stations, maxFitZoom, orthoBounds, resetKey]);
   return null;
 }
 
@@ -121,7 +121,7 @@ const OVERLAY_LAYERS = (region) => {
   return base;
 };
 
-export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, inspectMode = false, inspectPt = null, onInspect = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, abCompareGeom = null, showPlan = true }) {
+export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, inspectMode = false, inspectPt = null, onInspect = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, abCompareGeom = null, showPlan = true, resetKey = 0 }) {
   const ortho = ORTHO[region] || ORTHO.jezero;
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
@@ -144,7 +144,7 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
         {/* zoom at top-right: the default top-left corner is under the Layers panel */}
         <ZoomControl position="bottomleft" />
         <MapClickHandler addMode={addMode} onMapClick={onMapClick} inspectMode={inspectMode} onInspect={onInspect} />
-        <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} />
+        <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} resetKey={resetKey} />
         <ScaleControl />
         <ImageOverlay key={region} url={ortho.url} bounds={ortho.bounds} opacity={1} />
         {/* honest coverage boundary: outside this rectangle there is no imagery */}
@@ -280,19 +280,20 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           const dropped = droppedIds.includes(s.id);
           const visited = visitedIds.includes(s.id);
           // Per-station label placement so labels never cover each other at fit bounds
-          // (Skinner/Wildcat sit ~21 m apart; Kukaklek sits just NW of Base).
+          // (Skinner and Wildcat sit ~21 m apart: Skinner is slightly North -> top,
+          // Wildcat is South -> bottom, guaranteeing 28px+ vertical clearance).
           const LABEL_PLACEMENT = {
-            Skinner: ['top', [0, -8]],
-            Wildcat: ['right', [10, 0]],
-            Kukaklek: ['left', [-10, 0]],
-            Depot: ['right', [10, 0]],
-            Shuyak: ['left', [-10, 0]],
-            Mageik: ['top', [0, -8]],
-            GaleBase: ['bottom', [0, 10]],
-            Rocknest: ['left', [-10, 0]],
-            Shaler: ['bottom', [0, 10]],
-            JohnKleinCumberland: ['top', [0, -8]],
-            Departure: ['right', [10, 0]],
+            Skinner: ['top', [0, -14]],
+            Wildcat: ['bottom', [0, 14]],
+            Kukaklek: ['left', [-12, 0]],
+            Depot: ['right', [12, 0]],
+            Shuyak: ['left', [-12, 0]],
+            Mageik: ['top', [0, -12]],
+            GaleBase: ['bottom', [0, 12]],
+            Rocknest: ['left', [-12, 0]],
+            Shaler: ['bottom', [0, 12]],
+            JohnKleinCumberland: ['top', [0, -12]],
+            Departure: ['right', [12, 0]],
           };
           const [dir, off] = LABEL_PLACEMENT[s.id] || ['right', [10, 0]];
           return (
@@ -306,125 +307,263 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
       </MapContainer>
 
       {addMode && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1002] bg-cyan-900/95 border border-cyan-400 rounded px-3 py-1 text-[11px] text-white shadow-lg pointer-events-none">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1002] bg-cyan-900/95 border border-cyan-400 rounded-lg px-3 py-1.5 text-xs text-white shadow-xl pointer-events-none">
           Click inside the dashed coverage frame to place your waypoint
         </div>
       )}
       {inspectMode && !addMode && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1002] bg-cyan-900/95 border border-cyan-400 rounded px-3 py-1 text-[11px] text-white shadow-lg pointer-events-none">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1002] bg-cyan-900/95 border border-cyan-400 rounded-lg px-3 py-1.5 text-xs text-white shadow-xl pointer-events-none">
           Click anywhere to read the data at that point
         </div>
       )}
 
-      {/* Historical event records for this workspace: crater-level context only.
-          No verified event position exists inside this map's data (the archived
-          traverse has no rover record for the in-situ events' sols, and the other
-          records happened kilometers from the rover or regionally), so NOTHING is
-          pinned here - positions are never guessed. Verified point markers for
-          other events live on the Global globe. */}
+      {/* Historical event records for this workspace: crater-level context only. */}
       {layers.events && (() => {
         const regionEvents = eventsData.events.filter(e => e.workspace === region);
         if (!regionEvents.length) return null;
         return (
-          <div className="absolute bottom-8 right-2 z-[1000] bg-[#0d1420] border border-amber-800 rounded p-1.5 text-[9px] text-gray-200 max-w-[230px] shadow-lg">
+          <div className="absolute bottom-12 right-3 z-[1000] bg-[#070d18]/95 border border-amber-600/40 rounded-xl p-3 text-xs text-slate-200 max-w-[260px] shadow-2xl backdrop-blur-md">
             <div className="flex items-start justify-between gap-2">
               <b className="text-amber-300">Recorded natural events - {region === 'gale' ? 'Gale' : 'Jezero'} Crater</b>
               <button type="button" aria-label="Hide event records" onClick={() => toggle('events')}
-                className="text-gray-500 hover:text-gray-200 shrink-0">x</button>
+                className="text-slate-400 hover:text-white shrink-0 font-bold">✕</button>
             </div>
-            <div className="text-gray-400 mt-0.5">Historical records, not current conditions. None of these records has a verified position inside this map, so none is pinned - no position is guessed. {region === 'jezero' ? 'The amber stars mark the 2 recorded MEDA weather sols (477, 502) at the rover\'s recorded position those sols. ' : ''}Verified point markers (InSight quakes, Amazonis impact, polar avalanches) are on the Global globe.</div>
+            <div className="text-slate-300 mt-1 text-xs leading-relaxed">Historical records, not current conditions. None of these records has a verified position inside this map, so none is pinned - no position is guessed. {region === 'jezero' ? 'The amber stars mark the 2 recorded MEDA weather sols (477, 502) at the rover\'s recorded position those sols. ' : ''}Verified point markers are on the Global globe.</div>
             {regionEvents.map(e => (
-              <div key={e.id} className="mt-1 pt-1 border-t border-gray-800">
-                <b className="text-gray-100">{EV_TYPE_LABEL[e.type] || e.type}</b>
-                <span className="text-gray-300"> - {e.date_utc}{e.sol != null ? ` (Sol ${e.sol})` : ''}</span>
-                <div className="text-gray-400">{e.summary}</div>
-                {e.source_url && <a href={e.source_url} target="_blank" rel="noreferrer" className="text-cyan-400 underline">Source{e.credit ? `: ${e.credit}` : ''}</a>}
+              <div key={e.id} className="mt-1.5 pt-1.5 border-t border-slate-800 text-xs">
+                <b className="text-slate-100">{EV_TYPE_LABEL[e.type] || e.type}</b>
+                <span className="text-slate-300"> - {e.date_utc}{e.sol != null ? ` (Sol ${e.sol})` : ''}</span>
+                <div className="text-slate-300 mt-0.5">{e.summary}</div>
+                {e.source_url && <a href={e.source_url} target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all mt-0.5 inline-block">Source{e.credit ? `: ${e.credit}` : ''}</a>}
               </div>
             ))}
           </div>
         );
       })()}
 
-      {/* Layers panel */}
-      <details className="absolute top-2 left-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[240px] shadow-lg">
-        <summary className="cursor-pointer font-bold text-cyan-400 select-none">Layers</summary>
-        <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
-          <div className="text-gray-400 font-bold">Your plan</div>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} /> <span className="w-3 h-0.5 bg-[#22d3ee] inline-block"></span> Planned route (stop to stop)</label>
-          {layers.plannedRoute && setRouteModel && (
-            <label className="flex items-center gap-1.5 pl-4">Model
-              <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)} className="bg-[#0a0e17] border border-cyan-900 rounded px-1 py-0.5 text-[10px] min-w-0 flex-1 max-w-full">
-                <option value="straight">Straight line (geometric baseline)</option>
-                <option value="leastcost">Least-cost over terrain (slope-aware)</option>
-              </select>
-            </label>)}
-          {layers.plannedRoute && routeModel === 'leastcost' && (
-            <div className="pl-4 text-[9px] text-gray-500">A* over the elevation grid: no-data ground impassable, steep slopes cost more. A model under declared rules, not a surveyed or safe path. Times/distances follow this geometry.</div>)}
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} /> <span className="w-3 border-t border-dashed border-[#cc3333] inline-block"></span> Deferred legs</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} /> <span className="w-2 h-2 rounded-full bg-white border border-black inline-block"></span> Base (scenario start)</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} /> <span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] inline-block"></span> Your waypoints</label>
+      {/* Layers panel — floating glass HUD */}
+      <details className="absolute top-3 left-3 z-[1000] bg-[#070d18]/92 border border-cyan-500/25 rounded-xl p-3 text-xs text-slate-200 max-w-[270px] shadow-2xl backdrop-blur-md max-h-[calc(100vh-140px)] overflow-y-auto">
+        <summary className="cursor-pointer font-bold text-cyan-400 select-none flex items-center justify-between gap-2 tracking-wide uppercase">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse"></span>
+            Layers
+          </span>
+          <span className="text-[10px] text-cyan-500/80 font-mono">HUD</span>
+        </summary>
 
-          <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Places & rover record</div>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} /> Science objectives (shape per stop)</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} /> {roverTrack && roverTrack.segments ? 'Recorded drive path (NASA archive)' : 'Recorded rover positions (connected)'}</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} /> Recorded rover stops</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.events} onChange={() => toggle('events')} /> <span className="w-2.5 h-2.5 inline-block" style={{ background: '#fbbf24', clipPath: 'polygon(50% 0%, 63% 35%, 98% 35%, 70% 57%, 81% 91%, 50% 70%, 19% 91%, 30% 57%, 2% 35%, 37% 35%)' }}></span> Historical event records</label>
-          <details className="ml-5 text-[9px] text-gray-500">
-            <summary className="cursor-pointer select-none">what is pinned, what is not</summary>
-            {region === 'jezero'
-              ? 'Weather sols 477+502 are pinned at the rover\'s recorded positions those sols (archived M20 waypoints). The natural events are crater-level context: no verified positions inside this map, so no pins - positions are never guessed.'
-              : 'Crater-level context only: no verified event positions inside this map, so nothing is pinned - positions are never guessed.'}
+        <div className="mt-2 space-y-2 pt-2 border-t border-cyan-900/40">
+          <div className="eyebrow text-cyan-400/90">Your plan</div>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-3.5 h-0.5 bg-[#22d3ee] rounded-full shrink-0"></span>
+              <span>Planned route</span>
+            </span>
+          </label>
+
+          {layers.plannedRoute && setRouteModel && (
+            <div className="pl-6 space-y-1">
+              <label className="block text-slate-300 text-xs">
+                <span className="mb-1 block text-slate-400">Route model:</span>
+                <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)}
+                  className="station-select w-full">
+                  <option value="straight">Straight line baseline</option>
+                  <option value="leastcost">Least-cost over terrain</option>
+                </select>
+              </label>
+              {routeModel === 'leastcost' && (
+                <div className="text-xs text-slate-400 leading-normal">
+                  A* over elevation grid: no-data ground impassable, steep slopes cost more. Declared model, not a surveyed path.
+                </div>
+              )}
+            </div>
+          )}
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-3.5 border-t-2 border-dashed border-[#cc3333] shrink-0"></span>
+              <span>Deferred legs</span>
+            </span>
+          </label>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-900 shrink-0"></span>
+              <span>Base (scenario start)</span>
+            </span>
+          </label>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] shrink-0"></span>
+              <span>Your waypoints</span>
+            </span>
+          </label>
+
+          <div className="eyebrow text-cyan-400/90 pt-2 border-t border-cyan-900/40">Places & rover record</div>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
+              <span>Science objectives</span>
+            </span>
+          </label>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-3.5 h-0.5 bg-[#f97316] rounded-full shrink-0"></span>
+              <span>{roverTrack && roverTrack.segments ? 'Recorded drive path' : 'Recorded rover positions'}</span>
+            </span>
+          </label>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-2.5 h-2.5 rounded-full border border-[#f97316] bg-[#f97316]/40 shrink-0"></span>
+              <span>Recorded rover stops</span>
+            </span>
+          </label>
+
+          <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+            <input type="checkbox" checked={layers.events} onChange={() => toggle('events')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+              <span className="w-2.5 h-2.5 inline-block shrink-0" style={{ background: '#fbbf24', clipPath: 'polygon(50% 0%, 63% 35%, 98% 35%, 70% 57%, 81% 91%, 50% 70%, 19% 91%, 30% 57%, 2% 35%, 37% 35%)' }}></span>
+              <span>Historical event records</span>
+            </span>
+          </label>
+
+          <details className="disclosure mt-1">
+            <summary className="text-xs">What is pinned, what is not</summary>
+            <div className="disclosure-body text-xs text-slate-300">
+              {region === 'jezero'
+                ? 'Weather sols 477+502 are pinned at the rover\'s recorded positions those sols (archived M20 waypoints). Natural events are crater-level context: no verified positions inside this map, so no pins — positions are never guessed.'
+                : 'Crater-level context only: no verified event positions inside this map, so nothing is pinned — positions are never guessed.'}
+            </div>
           </details>
 
-          <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Geology maps</div>
-          {region === 'jezero' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} /> USGS geology units (SIM 3464)</label>}
-          {region === 'jezero' && <details className="ml-5 text-[9px] text-gray-500">
-            <summary className="cursor-pointer select-none">accuracy limits</summary>
-            Semi-controlled CTX basemap: unit boundaries carry ~100-200 m registration vs rover waypoint records - approximate at stop scale, not contact-level. Rock type does not rate how hard the walking is.
-          </details>}
-          {region === 'gale' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} /> CRISM 770 nm brightness</label>}
-          {region === 'gale' && <details className="ml-5 text-[9px] text-gray-500">
-            <summary className="cursor-pointer select-none">what this layer is</summary>
-            JHU/APL 2012 targeted mosaic, source resolution 19-38 m/px (FRT ~19 m, HRL ~38 m). Brightness only, NOT a mineral or unit map. Cropped with an integer-pixel window-edge match, so offsets up to about one 19 m source pixel are possible.
-          </details>}
+          <div className="eyebrow text-cyan-400/90 pt-2 border-t border-cyan-900/40">Geology maps</div>
 
-          {terrainMeta && <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Terrain layers</div>}
-          {terrainMeta && <div className="text-[9px] text-gray-500">Views of the same elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - not independent measurements:</div>}
-          {terrainMeta && OVERLAY_LAYERS(region).map(ol => (
-            <label key={ol.key} className="flex items-center gap-1.5"><input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} /> {ol.label}</label>
-          ))}
-          {terrainMeta && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} /> Contours{terrainMeta ? ` (${terrainMeta.contourIntervalM} m)` : ''}</label>}
-          {terrainMeta && <label className="flex items-center gap-1.5 pt-1 border-t border-gray-800">
-            Overlay opacity
-            <input type="range" min="0.15" max="0.9" step="0.05" value={layers.overlayOpacity}
-              onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value }))} className="w-20" />
-          </label>}
+          {region === 'jezero' && (
+            <>
+              <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+                <input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+                  <span className="w-2.5 h-2.5 rounded-sm border border-[#7cc4ff] bg-[#7cc4ff]/25 shrink-0"></span>
+                  <span>USGS geology units (SIM 3464)</span>
+                </span>
+              </label>
+              <details className="disclosure mt-1">
+                <summary className="text-xs">Accuracy limits</summary>
+                <div className="disclosure-body text-xs text-slate-300">
+                  Semi-controlled CTX basemap: unit boundaries carry ~100-200 m registration vs rover waypoint records — approximate at stop scale. Rock type does not rate walking difficulty.
+                </div>
+              </details>
+            </>
+          )}
+
+          {region === 'gale' && (
+            <>
+              <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+                <input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-br from-amber-700/60 to-slate-800 shrink-0 border border-amber-600/50"></span>
+                  <span>CRISM 770 nm brightness</span>
+                </span>
+              </label>
+              <details className="disclosure mt-1">
+                <summary className="text-xs">What this layer is</summary>
+                <div className="disclosure-body text-xs text-slate-300">
+                  JHU/APL 2012 targeted mosaic, source resolution 19-38 m/px. Brightness only, not a mineral or unit map. Cropped with integer-pixel edge match (offsets up to ~19 m possible).
+                </div>
+              </details>
+            </>
+          )}
+
           {terrainMeta && (
-            <div className="pt-1 border-t border-gray-800 text-[9px] text-gray-500 space-y-0.5">
-              <div>Elevation {terrainMeta.elevMin} to {terrainMeta.elevMax} m (viridis ramp)</div>
-              <div>Slope 0 to {terrainMeta.slopeMaxDeg}&deg; at {terrainMeta.gridM} m grid - steepness display, not a safety rating</div>
-              <div>Contours every {terrainMeta.contourIntervalM} m</div>
-            </div>
+            <>
+              <div className="eyebrow text-cyan-400/90 pt-2 border-t border-cyan-900/40">Terrain layers</div>
+              <div className="text-xs text-slate-400 mb-1">
+                Views of the same elevation grid ({region === 'gale' ? 'MSL Gale DEM 2 m' : 'CTX DTM 20 m'}):
+              </div>
+              {OVERLAY_LAYERS(region).map(ol => (
+                <label key={ol.key} className="switch flex items-center gap-2 cursor-pointer py-0.5">
+                  <input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} />
+                  <span className="switch-track shrink-0"></span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+                    <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${ol.key === 'elevRamp' ? 'bg-gradient-to-r from-purple-600 via-teal-500 to-yellow-400' : ol.key === 'hillshade' ? 'bg-gradient-to-br from-white/80 via-slate-500 to-black' : 'bg-gradient-to-r from-emerald-600 via-amber-500 to-rose-600'}`}></span>
+                    <span>{ol.label}</span>
+                  </span>
+                </label>
+              ))}
+              <label className="switch flex items-center gap-2 cursor-pointer py-0.5">
+                <input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-200 flex-1">
+                  <span className="w-3.5 border-t border-slate-300 shrink-0"></span>
+                  <span>Contours{terrainMeta ? ` (${terrainMeta.contourIntervalM} m)` : ''}</span>
+                </span>
+              </label>
+
+              <div className="pt-2 border-t border-cyan-900/40 mt-1">
+                <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+                  <span>Overlay opacity</span>
+                  <span className="font-mono text-cyan-300">{Math.round(layers.overlayOpacity * 100)}%</span>
+                </div>
+                <input type="range" min="0.15" max="0.9" step="0.05" value={layers.overlayOpacity}
+                  onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value }))}
+                  className="w-full accent-cyan-400 cursor-pointer" />
+              </div>
+
+              <div className="text-xs text-slate-400 space-y-0.5 pt-1">
+                <div>Elevation {terrainMeta.elevMin} to {terrainMeta.elevMax} m</div>
+                <div>Slope 0 to {terrainMeta.slopeMaxDeg}&deg; at {terrainMeta.gridM} m grid</div>
+                <div>Contours every {terrainMeta.contourIntervalM} m</div>
+              </div>
+            </>
           )}
         </div>
       </details>
 
-      {/* Collapsible legend & sources link (closed by default on mobile) */}
-      <details className="absolute bottom-2 right-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[210px] shadow-lg">
-        <summary className="cursor-pointer font-bold text-cyan-400 select-none">Legend & Data</summary>
-        <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
-          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#22d3ee]"></span> Planned route ({routeModel === 'leastcost' ? 'least-cost terrain model' : 'straight-line baseline'})</div>
-          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#a3e635]"></span> {abCompareGeom ? 'Least-cost path (slope-aware model)' : `Your two-point route (same model${region === 'gale' ? ', or the recorded drive path when following it' : ''})`}</div>
-          {abCompareGeom && <div className="flex items-center gap-1.5"><span className="w-3 border-t border-dashed border-[#9ca3af] inline-block"></span> Straight-line baseline (comparison, not a proposed path)</div>}
-          {region === 'gale' && <div className="flex items-center gap-1.5"><span className="w-3 border-t-2 border-dashed border-[#a3e635] opacity-80"></span> Synthetic gap connector (not recorded drive ground)</div>}
-          {region === 'jezero' && <div className="flex items-center gap-1.5"><span className="w-3 h-3 border border-[#7cc4ff] bg-[#7cc4ff]/10 inline-block"></span> USGS geology unit boundaries (SIM 3464)</div>}
-          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#cc3333]"></span> Deferred / dropped leg</div>
+      {/* Collapsible legend & sources link — floating glass card */}
+      <details className="absolute bottom-3 right-3 z-[1000] bg-[#070d18]/92 border border-cyan-500/25 rounded-xl p-3 text-xs text-slate-200 max-w-[260px] max-h-[60vh] overflow-y-auto shadow-2xl backdrop-blur-md">
+        <summary className="cursor-pointer font-bold text-cyan-400 select-none flex items-center justify-between gap-2 tracking-wide uppercase">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>
+            Legend & Data
+          </span>
+          <span className="text-[10px] text-cyan-500/80 font-mono">INFO</span>
+        </summary>
+
+        <div className="mt-2 space-y-1.5 pt-2 border-t border-cyan-900/40 text-xs">
+          <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#22d3ee] rounded-full shrink-0"></span> <span>Planned route ({routeModel === 'leastcost' ? 'least-cost model' : 'straight baseline'})</span></div>
+          <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#a3e635] rounded-full shrink-0"></span> <span>{abCompareGeom ? 'Least-cost path' : `Your two-point route${region === 'gale' ? ' (model or drive path)' : ''}`}</span></div>
+          {abCompareGeom && <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#9ca3af] shrink-0"></span> <span>Straight-line baseline</span></div>}
+          {region === 'gale' && <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#a3e635] opacity-80 shrink-0"></span> <span>Synthetic gap connector</span></div>}
+          {region === 'jezero' && <div className="flex items-center gap-2"><span className="w-3 h-3 border border-[#7cc4ff] bg-[#7cc4ff]/20 rounded-sm shrink-0"></span> <span>USGS geology units (SIM 3464)</span></div>}
+          <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#cc3333] shrink-0"></span> <span>Deferred / dropped leg</span></div>
           {region === 'gale'
-            ? <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#f97316]"></span> NASA recorded traverse geometry (MSL MMGIS drive polylines)</div>
-            : <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#f97316]"></span> Recorded rover positions, connected (NASA snapshot 2022-12-23; not the measured driven path)</div>}
-          <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-[#f97316] bg-[#f97316]/40"></span> Recorded rover stop</div>
-          <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-white border border-black"></span> {region === 'gale' ? 'Scenario base - declared start & return point (no real installation)' : 'Base - where your walk starts & returns (planning point, not a real base)'}</div>
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17]"></span> Your waypoint (draggable, route via - no science dwell)</div>
+            ? <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#f97316] rounded-full shrink-0"></span> <span>NASA traverse geometry (MSL)</span></div>
+            : <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#f97316] shrink-0"></span> <span>Recorded rover positions</span></div>}
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full border border-[#f97316] bg-[#f97316]/40 shrink-0"></span> <span>Recorded rover stop</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-900 shrink-0"></span> <span>{region === 'gale' ? 'Scenario base (start & return)' : 'Base (planning start & return)'}</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] shrink-0"></span> <span>Your waypoint (draggable)</span></div>
+
           {stations.filter(s => s.id !== 'Depot' && s.id !== 'GaleBase' && s.lat != null).map(s => {
             const st = STATION_STYLE[s.id] || { color: '#ffb02e', shape: 'circle' };
             const swatch = st.shape === 'diamond'
@@ -437,21 +576,32 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
               ? { width: 10, height: 10, background: st.color, clipPath: 'polygon(50% 0%, 100% 38%, 81% 100%, 19% 100%, 0% 38%)' }
               : { width: 10, height: 10, background: st.color, borderRadius: '50%', border: '1.5px solid #0a0e17' };
             return (
-              <div key={s.id} className="flex items-center gap-1.5">
-                <span style={swatch}></span> {s.short || s.name.split('(')[0].trim()}
+              <div key={s.id} className="flex items-center gap-2">
+                <span style={swatch} className="shrink-0"></span>
+                <span>{s.short || s.name.split('(')[0].trim()}</span>
               </div>
             );
           })}
-          {region === 'gale' && <div className="pt-1 border-t border-gray-800 text-[9px] text-gray-500">Stop names are informal MSL mission names; a bounded search of the USGS Gazetteer (2026-11-13) found no IAU-approved names for these stops.</div>}
-          <div className="pt-1 border-t border-gray-800 text-[9px] space-y-0.5">
-            {region === 'gale' ? (<>
-              <div><a href="https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Gale DEM (USGS MSL mosaic 1 m v3)</a></div>
-              <div><a href="https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json" target="_blank" rel="noreferrer" className="text-cyan-400 underline">MSL waypoint records (NASA MMGIS)</a></div>
-              <div><a href="http://crism.jhuapl.edu/msl_landing_sites/index_news.php" target="_blank" rel="noreferrer" className="text-cyan-400 underline">CRISM Gale mosaic (JHU/APL)</a></div>
-            </>) : (
-              <a href="https://pubs.usgs.gov/publication/sim3464" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Data sources (USGS & NASA)</a>
+
+          {region === 'gale' && (
+            <div className="pt-1.5 border-t border-cyan-900/40 text-xs text-slate-400">
+              Stop names are informal MSL mission names; no IAU-approved names exist for these stops.
+            </div>
+          )}
+
+          <div className="pt-1.5 border-t border-cyan-900/40 text-xs space-y-1">
+            {region === 'gale' ? (
+              <>
+                <div><a href="https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">Gale DEM (USGS MSL mosaic 1 m v3)</a></div>
+                <div><a href="https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">MSL waypoint records (NASA MMGIS)</a></div>
+                <div><a href="http://crism.jhuapl.edu/msl_landing_sites/index_news.php" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">CRISM Gale mosaic (JHU/APL)</a></div>
+              </>
+            ) : (
+              <a href="https://pubs.usgs.gov/publication/sim3464" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">Data sources (USGS SIM 3464 & NASA)</a>
             )}
           </div>
+        </div>
+      </details>
         </div>
       </details>
     </div>

@@ -33,12 +33,10 @@
     "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
     "photoId": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
     "flags": [
-      "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-      "Dwell time 60 min is a declared scenario minimum (assumption, not a NASA standard; not shortenable in UI)"
+      "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
     ],
     "flagsShort": [
-      "Position = last recorded rover position near the sample site - not the exact sample spot.",
-      "60 min dwell is a scenario assumption, not a NASA standard."
+      "Position = last recorded rover position near the sample site - not the exact sample spot."
     ],
     "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
     "region": "jezero",
@@ -58,13 +56,11 @@
     "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
     "flags": [
       "Stop position = last recorded rover position near the Swift Run / Skyland sample location (samples sealed sols 490 and 495 at Skinner Ridge per the NASA samples catalog; sol-477 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-      "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops",
-      "Dwell time 60 min is a declared scenario minimum (assumption, not a NASA standard; not shortenable in UI)"
+      "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops"
     ],
     "flagsShort": [
       "Position = last recorded rover position near the sample site - not the exact sample spot.",
-      "20.96 m from Wildcat (about one 20 m grid cell) - two objectives, not two distant outcrops.",
-      "60 min dwell is a scenario assumption, not a NASA standard."
+      "20.96 m from Wildcat (about one 20 m grid cell) - two objectives, not two distant outcrops."
     ],
     "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
     "region": "jezero",
@@ -82,12 +78,10 @@
     "photo": null,
     "photoNote": null,
     "flags": [
-      "Stop position = last recorded rover position near the Kukaklek sample location (sample sealed sol 631 at Hidden Harbor per the NASA samples catalog; sol-629 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-      "Dwell time 60 min is a declared scenario minimum (assumption, not a NASA standard; not shortenable in UI)"
+      "Stop position = last recorded rover position near the Kukaklek sample location (sample sealed sol 631 at Hidden Harbor per the NASA samples catalog; sol-629 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
     ],
     "flagsShort": [
-      "Position = last recorded rover position near the sample site - not the exact sample spot.",
-      "60 min dwell is a scenario assumption, not a NASA standard."
+      "Position = last recorded rover position near the sample site - not the exact sample spot."
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-kukaklek-sample-16/",
     "region": "jezero",
@@ -106,13 +100,11 @@
     "photoId": "ZL0_0565_0717112266_568EBY_N0290000ZCAM07115_1100LMJ",
     "flags": [
       "Stop position = last recorded rover position near the Shuyak sample location (sample sealed sol 575 at the Amalik outcrop per the NASA samples catalog; sol-565 record in the archived 2022-12-23 NASA M20 waypoints snapshot, no intervening drive records through sol 575 - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment.",
-      "Dwell time 60 min is a declared scenario minimum (assumption, not a NASA standard; not shortenable in UI)"
+      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment."
     ],
     "flagsShort": [
       "Position = last recorded rover position near the sample site - not the exact sample spot.",
-      "Same geology unit as the Delta Front stops - different samples and route, not a different environment.",
-      "60 min dwell is a scenario assumption, not a NASA standard."
+      "Same geology unit as the Delta Front stops - different samples and route, not a different environment."
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
     "region": "jezero",
@@ -131,13 +123,11 @@
     "photoId": "ZL0_0609_0721008552_410EBY_N0301096ZCAM03478_1100LMJ",
     "flags": [
       "Stop position = last recorded rover position near the Mageik sample location (sample sealed sol 619 at the Amalik outcrop per the NASA samples catalog; sol-609 drive record in the archived 2022-12-23 NASA M20 waypoints snapshot, no intervening drive records through sol 619 - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment.",
-      "Dwell time 60 min is a declared scenario minimum (assumption, not a NASA standard; not shortenable in UI)"
+      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment."
     ],
     "flagsShort": [
       "Position = last recorded rover position near the sample site - not the exact sample spot.",
-      "Same geology unit as the Delta Front stops - different samples and route, not a different environment.",
-      "60 min dwell is a scenario assumption, not a NASA standard."
+      "Same geology unit as the Delta Front stops - different samples and route, not a different environment."
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
     "region": "jezero",
@@ -179,8 +169,7 @@
       "Event and name source: NASA JPL PIA16173 page (scoop photos and sols)."
     ],
     "flagsShort": [
-      "Position = the recorded rover position at the patch (sol 59), not a surveyed scoop point.",
-      null
+      "Position = the recorded rover position at the patch (sol 59), not a surveyed scoop point."
     ],
     "src": "https://www.jpl.nasa.gov/images/pia16173-curiosity-digs-in/",
     "short": "Rocknest",
@@ -203,8 +192,7 @@
       "Event and name source: NASA Science PIA16550 page (sol 120 Mastcam view, Glenelg area)."
     ],
     "flagsShort": [
-      "Position = the rover's recorded viewpoint (sol 120) - where the rover stood, not the outcrop itself.",
-      null
+      "Position = the rover's recorded viewpoint (sol 120) - where the rover stood, not the outcrop itself."
     ],
     "src": "https://science.nasa.gov/resource/layered-martian-outcrop-shaler-in-glenelg-area/",
     "short": "Shaler",
@@ -229,8 +217,7 @@
     ],
     "flagsShort": [
       "One walking stop for both drill sites (2.75 m apart).",
-      "Position = nearest recorded rover position (sol 166) - not a surveyed drill point.",
-      null
+      "Position = nearest recorded rover position (sol 166) - not a surveyed drill point."
     ],
     "src": "https://science.nasa.gov/resource/location-of-john-klein-drill-site/",
     "short": "Drill sites",
@@ -253,8 +240,7 @@
       "Source: JPL news 2013-07-08 'Mars Rover Curiosity Begins Trek Toward Mount Sharp'."
     ],
     "flagsShort": [
-      "Position = recorded end of the 18 m departure drive (sol 324).",
-      null
+      "Position = recorded end of the 18 m departure drive (sol 324)."
     ],
     "src": "https://www.jpl.nasa.gov/news/mars-rover-curiosity-begins-trek-toward-mount-sharp/",
     "short": "Departure",

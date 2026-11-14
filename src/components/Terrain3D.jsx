@@ -349,7 +349,19 @@ function Scene({ hm, stations, plan, focus, lk, region, minDist = 150, mode = 'p
   );
 }
 
-export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot', mode = 'planner', abPath = null, abParts = null, abCompare = null, legsProvider = null }) {
+function ResetCamera({ resetKey, camPos, focus }) {
+  const { camera, controls, invalidate } = useThree();
+  useEffect(() => {
+    if (!resetKey || !controls) return;
+    camera.position.set(...camPos);
+    controls.target.set(...focus);
+    controls.update();
+    invalidate();
+  }, [resetKey, camPos, focus, camera, controls, invalidate]);
+  return null;
+}
+
+export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot', mode = 'planner', abPath = null, abParts = null, abCompare = null, legsProvider = null, resetKey = 0 }) {
   const [hm, setHm] = useState(null);
   useEffect(() => {
     setHm(null);
@@ -419,6 +431,7 @@ export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 
           rendered frames. */}
       <Canvas frameloop="demand" camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
         style={{ background: '#0a0e17' }} dpr={[1, 1.5]}>
+        <ResetCamera resetKey={resetKey} camPos={camPos} focus={focus} />
         <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} region={region} minDist={minDist} mode={mode} abPath={abPath} abParts={abParts} abCompare={abCompare} legsProvider={legsProvider} />
         <LabelDriver items={labelItems} />
       </Canvas>
@@ -433,10 +446,10 @@ export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 
           </div>
         ))}
       </div>
-      <div className="absolute bottom-1 left-1 z-[1000] pointer-events-none bg-[#0d1420cc] border border-cyan-900 rounded px-2 py-1 text-[9px] leading-tight text-gray-300 max-w-[260px]">
+      <div className="absolute bottom-2 left-2 z-[1000] pointer-events-none bg-[#070d18]/90 border border-cyan-500/25 rounded-lg px-2.5 py-1.5 text-xs leading-normal text-slate-300 max-w-[280px] shadow-lg backdrop-blur-md">
         {region === 'gale'
           ? '3D Terrain: Visual representation of the 2 m grid decimated from the USGS MSL Gale DEM Mosaic 1 m v3. Not a navigational surface.'
-          : '3D Terrain: Visual representation of 20m DTM grid. Not a navigational surface.'}
+          : '3D Terrain: Visual representation of 20 m DTM grid. Not a navigational surface.'}
         <br />Vertical exaggeration x{VE} (display only). Texture: {region === 'gale' ? 'HiRISE LRGB ortho (grayscale).' : 'CTX ortho (grayscale).'}
       </div>
     </div>

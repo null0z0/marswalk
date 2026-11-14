@@ -4,105 +4,223 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
   const science = stations.filter(s => s.id !== baseId);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {onClose && (
         <div className="flex items-center justify-between">
           <span className="eyebrow">{appMode === 'route' ? 'Real places in this area' : 'Stops & priorities'}</span>
           <button type="button" className="icon-button drawer-close" onClick={onClose} aria-label="Close objectives panel">✕</button>
         </div>
       )}
+
       {base && (
-        <div key={base.id} className="p-2 rounded border border-gray-700 bg-[#0d1420]/50 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-gray-200">{base.name}</span>
-            {appMode === 'planner' && <span className="text-gray-400 font-mono text-[9px]">'SCENARIO START'</span>}
-          </div>
-          <div className="text-gray-400">{base.unit}</div>
-          {(base.flagsShort || base.flags || []).filter(Boolean).map(f => <div key={f} className="text-amber-400 text-[10px] mt-0.5">⚠ {f}</div>)}
-          <details className="mt-1">
-            <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats{base.photo ? ', photo' : ''}</summary>
-            {base.unitDescription && (
-              <div className="text-gray-400 text-[10px] mt-1">
-                {base.unitDescription} <a href="https://pubs.usgs.gov/sim/3464/sim3464.pdf" target="_blank" rel="noreferrer" className="underline text-cyan-400">map sheet</a>
+        <div key={base.id} className="station-card">
+          <div className="station-head">
+            <span className="station-index">0</span>
+            <div className="station-heading">
+              <div className="flex items-center justify-between gap-2">
+                <span className="station-name">{base.name}</span>
+                {appMode === 'planner' && <span className="chip chip--cyan">Scenario start</span>}
               </div>
-            )}
-            <div className="mt-1 text-gray-300">{base.objective}</div>
-            {(base.flags || []).map(f => <div key={f} className="text-amber-400/80 text-[10px] mt-0.5">⚠ {f}</div>)}
-            {base.photo && (
-              <>
-                <img src={base.photo} alt={base.name} className="mt-1 rounded w-full" />
-                <div className="text-[9px] text-gray-500 mt-1">{base.photoNote}</div>
-              </>
-            )}
-          </details>
+              {base.unit && <div className="station-unit">{base.unit}</div>}
+              {base.lat != null && base.lon != null && (
+                <div className="font-mono text-xs text-slate-400 mt-0.5">
+                  lat {base.lat.toFixed(5)}, lon {base.lon.toFixed(5)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(base.flagsShort || base.flags || []).filter(Boolean).map(f => (
+            <div key={f} className="flag mx-3 my-1">
+              <span>⚠</span>
+              <span>{f}</span>
+            </div>
+          ))}
+
+          <div className="station-details">
+            <details className="disclosure mt-2">
+              <summary className="text-xs">Objective, caveats{base.photo ? ', photo' : ''}</summary>
+              <div className="disclosure-body space-y-2">
+                {base.objective && (
+                  <div className="text-slate-200 text-xs leading-relaxed">{base.objective}</div>
+                )}
+                {base.unitDescription && (
+                  <div className="text-slate-400 text-xs">
+                    {base.unitDescription}{' '}
+                    <a href="https://pubs.usgs.gov/sim/3464/sim3464.pdf" target="_blank" rel="noreferrer" className="underline text-cyan-400">USGS SIM 3464 map sheet</a>
+                  </div>
+                )}
+                {(base.flags || []).map(f => (
+                  <div key={f} className="flag">
+                    <span>⚠</span>
+                    <span>{f}</span>
+                  </div>
+                ))}
+                {base.photo && (
+                  <div>
+                    <div className="station-media rounded-lg mt-1">
+                      <img src={base.photo} alt={base.name} />
+                      {base.sol != null && <span className="station-media-tag">Sol {base.sol}</span>}
+                    </div>
+                    {base.photoNote && <div className="text-xs text-slate-400 mt-1">{base.photoNote}</div>}
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
         </div>
       )}
 
-      {science.map(s => {
+      {science.map((s, idx) => {
         const dropped = droppedIds.includes(s.id);
         const covDropped = coverageDropIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
         const unroutable = s.lat == null;
+
         if (s.custom) {
           // User waypoint card: coordinates only, no invented science content.
           return (
-            <div key={s.id} className={`p-2 rounded border text-xs ${covDropped ? 'border-amber-500 bg-amber-950/20' : 'border-cyan-700 border-dashed'}`}>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-cyan-200">{s.name}</span>
+            <div key={s.id} className={`station-card p-3 ${covDropped ? 'border-amber-500 bg-amber-950/20' : 'border-cyan-500/40 border-dashed'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="station-name text-cyan-200">{s.name}</span>
                 {!visited && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="px-1 rounded bg-cyan-800 text-cyan-100 text-[9px] font-bold" title="Navigation point you placed: the route always goes through it, it never gets a science stop's dwell time, and it is never dropped by science priority. If the plan cannot fit it, the plan says so instead of dropping it.">ROUTE VIA - ALWAYS KEPT</span>
-                    {onRemoveWaypoint && <button onClick={() => onRemoveWaypoint(s.id)} className="text-red-400 underline text-[10px]">delete</button>}
-                  </span>)}
-                {visited && <span className="text-green-400 font-mono text-[9px]">COMPLETED - SIMULATED EVA</span>}
+                  <div className="flex items-center gap-2">
+                    <span className="chip chip--cyan" title="Navigation point: the route always goes through it.">Route via · Always kept</span>
+                    {onRemoveWaypoint && (
+                      <button type="button" onClick={() => onRemoveWaypoint(s.id)} className="text-red-400 hover:text-red-300 underline text-xs">
+                        delete
+                      </button>
+                    )}
+                  </div>
+                )}
+                {visited && <span className="chip chip--green">Completed</span>}
               </div>
-              <div className="text-gray-400 font-mono text-[10px]">lat {s.lat.toFixed(5)}, lon {s.lon.toFixed(5)} - drag on map to move</div>
-              <div className="text-gray-500 text-[10px] mt-0.5">Your waypoint: coordinates only. No science objective, geology unit, photo or science dwell time is attached - none exists for an arbitrary point. If time runs short, science stops are deferred first; this point stays on the route.</div>
-              {covDropped && <div className="text-amber-400 text-[10px] mt-0.5">Outside elevation coverage - no route can be computed to it.</div>}
+              <div className="text-slate-400 font-mono text-xs mt-1">
+                lat {s.lat.toFixed(5)}, lon {s.lon.toFixed(5)} — drag on map to adjust
+              </div>
+              <div className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Navigation waypoint: coordinates only. No science objective or dwell time attached. Stays on route if time runs short.
+              </div>
+              {covDropped && (
+                <div className="text-amber-400 text-xs mt-1 font-semibold">
+                  Outside elevation coverage — no route can be computed.
+                </div>
+              )}
             </div>
           );
         }
+
+        const cardCls = dropped
+          ? 'station-card station-card--deferred'
+          : visited
+          ? 'station-card station-card--completed'
+          : 'station-card';
+
         return (
-          <div key={s.id} className={`p-2 rounded border text-xs transition-all duration-500 ${dropped ? 'border-red-500 bg-red-950/30' : 'border-cyan-900'}`}>
-            <div className="flex items-center justify-between">
-              <span className={`font-bold ${dropped ? 'line-through text-red-400' : ''}`}>{s.name}</span>
-              {dropped && <span className="px-1 rounded bg-red-600 text-white text-[9px] font-bold">LOST</span>}
-              {unroutable && <span className="px-1 rounded bg-amber-700 text-white text-[9px] font-bold">POSITION UNAVAILABLE - NOT ROUTABLE</span>}
-              {!unroutable && (visited
-                ? <span className="text-green-400 font-mono text-[9px]">COMPLETED - SIMULATED EVA</span>
-                : <span className="flex items-center gap-1">
-                    {appMode === 'planner' && <label>Prio
-                      <select className="bg-black border border-gray-700 rounded ml-1" value={priorities[s.id] || 3} onChange={e => setPriority(s.id, +e.target.value)}>
-                        {Array.from({ length: Math.max(3, science.filter(x => !x.custom).length) }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </label>}
-                    {appMode === 'planner' && <label className="flex items-center gap-1"><input type="checkbox" checked={mustHaves.includes(s.id)} onChange={() => toggleMustHave(s.id)} />must</label>}
-                  </span>)}
-            </div>
-            <div className="text-gray-400">{s.unit}</div>
-            {(s.flagsShort || s.flags || []).filter(Boolean).map(f => <div key={f} className="text-amber-400 text-[10px] mt-0.5">⚠ {f}</div>)}
-            <details key={dropped ? 'd' : 'k'} className="mt-1">
-              <summary className="cursor-pointer text-gray-500 text-[10px] select-none">objective, caveats{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}</summary>
-              {s.unitDescription && (
-                <div className="text-gray-400 text-[10px] mt-1">
-                  {s.unitDescription} <a href="https://pubs.usgs.gov/sim/3464/sim3464.pdf" target="_blank" rel="noreferrer" className="underline text-cyan-400">map sheet</a>
+          <div key={s.id} className={cardCls}>
+            <div className="station-head">
+              <span className="station-index">{idx + 1}</span>
+              <div className="station-heading">
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`station-name ${dropped ? 'line-through text-red-300' : ''}`}>{s.name}</span>
+                  {dropped && <span className="chip chip--red">Deferred</span>}
+                  {unroutable && <span className="chip chip--amber">Position unavailable</span>}
+                  {!unroutable && (visited
+                    ? <span className="chip chip--green">Completed</span>
+                    : (
+                      <div className="flex items-center gap-2">
+                        {appMode === 'planner' && (
+                          <label className="flex items-center gap-1 text-slate-300 text-xs">
+                            Prio
+                            <select
+                              aria-label={`Priority for ${s.name}`}
+                              className="station-select text-xs ml-1"
+                              value={priorities[s.id] || 3}
+                              onChange={e => setPriority(s.id, +e.target.value)}
+                            >
+                              {Array.from({ length: Math.max(3, science.filter(x => !x.custom).length) }, (_, i) => i + 1).map(n => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {appMode === 'planner' && (
+                          <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={mustHaves.includes(s.id)}
+                              onChange={() => toggleMustHave(s.id)}
+                              className="accent-cyan-400"
+                            />
+                            must
+                          </label>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
-              )}
-              <div className={`mt-1 transition-all duration-500 ${dropped ? 'line-through' : ''}`}>
-                {(() => { const [first, ...rest] = (s.objective || '').split(/(?<=\.)\s+/); return <><b className="text-gray-200">{first}</b>{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}
+                {s.unit && <div className="station-unit">{s.unit}</div>}
               </div>
-              {(s.flags || []).map(f => <div key={f} className="text-amber-400/80 text-[10px] mt-0.5">⚠ {f}</div>)}
-              {dropped && <div className="text-red-400 font-bold mt-1">LOST this EVA - lowest-priority non-must-have. You will not see this:</div>}
-              {s.photo && (
-                <>
-                  <img src={s.photo} alt={s.name} className={`mt-1 rounded w-full transition-all duration-700 ${dropped ? 'grayscale opacity-50' : ''}`} />
-                  <div className="text-[9px] text-gray-500 mt-1">{s.photoNote}{s.src && <> <a href={s.src} target="_blank" rel="noreferrer" className="text-gray-500 underline break-all">source</a></>}</div>
-                </>
-              )}
-              {s.meda && (
-                <div className="text-[9px] text-gray-500 mt-1 border-t border-gray-800 pt-1">{s.meda} <a href="https://atmos.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/data_calibrated_env/" target="_blank" rel="noreferrer" className="text-gray-500 underline break-all">PDS MEDA archive</a></div>
-              )}
-            </details>
+            </div>
+
+            {s.objective && (
+              <div className={`station-objective ${dropped ? 'line-through' : ''}`}>
+                {s.objective}
+              </div>
+            )}
+
+            {dropped && (
+              <div className="station-deferred-note">
+                Deferred this EVA (lowest-priority non-must-have to meet time window).
+              </div>
+            )}
+
+            {(s.flagsShort || s.flags || []).filter(Boolean).map(f => (
+              <div key={f} className="flag mx-3 my-0.5">
+                <span>⚠</span>
+                <span>{f}</span>
+              </div>
+            ))}
+
+            <div className="station-details">
+              <details key={dropped ? 'd' : 'k'} className="disclosure mt-2">
+                <summary className="text-xs">Objective, caveats{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}</summary>
+                <div className="disclosure-body space-y-2">
+                  {s.unitDescription && (
+                    <div className="text-slate-400 text-xs">
+                      {s.unitDescription}{' '}
+                      <a href="https://pubs.usgs.gov/sim/3464/sim3464.pdf" target="_blank" rel="noreferrer" className="underline text-cyan-400">USGS SIM 3464 map sheet</a>
+                    </div>
+                  )}
+                  {(s.flags || []).map(f => (
+                    <div key={f} className="flag">
+                      <span>⚠</span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                  {s.photo && (
+                    <div>
+                      <div className="station-media rounded-lg mt-1">
+                        <img src={s.photo} alt={s.name} className={dropped ? 'grayscale opacity-60' : ''} />
+                        {s.sol != null && <span className="station-media-tag">Sol {s.sol}</span>}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        {s.photoNote}
+                        {s.src && (
+                          <> <a href={s.src} target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all">source</a></>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {s.meda && (
+                    <div className="text-xs text-slate-400 pt-1 border-t border-slate-800">
+                      {s.meda}{' '}
+                      <a href="https://atmos.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/data_calibrated_env/" target="_blank" rel="noreferrer" className="text-cyan-400 underline break-all">PDS MEDA archive</a>
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
           </div>
         );
       })}

@@ -166,7 +166,20 @@ function ZoomTracker({ setView }) {
   return null;
 }
 
-export default function GlobalView({ onOpenRegion }) {
+function ResetGlobeCamera({ resetKey, homePos, setSpin }) {
+  const { camera, controls, invalidate } = useThree();
+  useEffect(() => {
+    if (!resetKey || !controls) return;
+    camera.position.set(...homePos);
+    controls.target.set(0, 0, 0);
+    controls.update();
+    setSpin(true);
+    invalidate();
+  }, [resetKey, homePos, setSpin, camera, controls, invalidate]);
+  return null;
+}
+
+export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
   const [catalog, setCatalog] = useState(null);
   const [selected, setSelected] = useState(null);
   const [bannerOpen, setBannerOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 560 : true);
@@ -183,7 +196,23 @@ export default function GlobalView({ onOpenRegion }) {
   const [demError, setDemError] = useState(null);
   const [fit, setFit] = useState(null);
   const [spin, setSpin] = useState(() => !(typeof location !== 'undefined' && location.hash.includes('globelon')));
-  const [view, setView] = useState({ dist: 3.0, dir: [0, 0.35, 0.94] });
+  const homePos = useMemo(() => {
+    const m = (typeof location !== 'undefined' ? location.hash : '').match(/globelon=(-?[0-9.]+)&globelat=(-?[0-9.]+)/);
+    const v = m ? latLonToVec3(parseFloat(m[2]), parseFloat(m[1]), 3.0) : new THREE.Vector3(0, 0.9, 3.0);
+    return [v.x, v.y, v.z];
+  }, []);
+
+  useEffect(() => {
+    if (!resetKey) return;
+    setSelected(null);
+    setSelectedEv(null);
+    setSelectedEvId(null);
+    setEvDetailOpen(false);
+    setDemFrom('');
+    setDemTo('');
+    setDemResult(null);
+    setDemError(null);
+  }, [resetKey]);
   const [visibleKeys, setVisibleKeys] = useState({ sig: '', keys: new Set() });
   const bannerRef = useRef(null);
   const buttonsRef = useRef(null);
@@ -250,11 +279,8 @@ export default function GlobalView({ onOpenRegion }) {
 
   return (
     <div className="global-view" style={{ position: 'absolute', inset: 0 }} ref={canvasWrapRef}>
-      <Canvas camera={{ position: (() => {
-          const m = (typeof location !== 'undefined' ? location.hash : '').match(/globelon=(-?[0-9.]+)&globelat=(-?[0-9.]+)/);
-          const v = m ? latLonToVec3(parseFloat(m[2]), parseFloat(m[1]), 3.0) : new THREE.Vector3(0, 0.9, 3.0);
-          return [v.x, v.y, v.z];
-        })(), fov: 42 }} style={{ background: '#05070c' }}>
+      <Canvas camera={{ position: homePos, fov: 42 }} style={{ background: '#05070c' }}>
+        <ResetGlobeCamera resetKey={resetKey} homePos={homePos} setSpin={setSpin} />
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 2, 4]} intensity={1.1} />
         <CameraFill />
@@ -312,12 +338,12 @@ export default function GlobalView({ onOpenRegion }) {
       </Canvas>
 
       <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100% - 16px)' }}>
-      <div ref={bannerRef} style={{ maxWidth: bannerOpen ? 300 : 170, overflowY: 'auto', flexShrink: 1, minHeight: 0 }}
-        className="bg-[#0d1420]/95 border border-cyan-900 rounded p-2 text-[10px] text-gray-300">
+      <div ref={bannerRef} style={{ maxWidth: bannerOpen ? 320 : 180, overflowY: 'auto', flexShrink: 1, minHeight: 0 }}
+        className="bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
         <div className="flex items-center justify-between gap-2">
-          <b className="text-cyan-400">Global overview - orientation only.</b>
+          <b className="text-cyan-400">Global overview — orientation only</b>
           <button type="button" onClick={() => setBannerOpen(o => !o)}
-            className="text-gray-500 hover:text-gray-200 text-[10px] shrink-0">{bannerOpen ? 'hide' : 'info'}</button>
+            className="text-slate-400 hover:text-white text-xs shrink-0 underline">{bannerOpen ? 'hide' : 'info'}</button>
         </div>
         {bannerOpen && <>
         <div className="mb-1">Place names: official IAU/USGS Gazetteer ({nom ? nom.length : '...'}

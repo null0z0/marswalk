@@ -61,49 +61,49 @@ export default function PointInspector({ pt, grid, hiGrid, geojson, region, stat
   const gridM = info && info.elevSrc && hiGrid && info.elevSrc === hiGrid.srcLabel ? hiGrid.dx : grid ? grid.dx : null;
 
   return (
-    <section className="panel text-xs space-y-1.5">
+    <section className="panel text-xs space-y-2">
       <div className="flex items-center justify-between">
         <div className="eyebrow">Point inspector</div>
-        <button onClick={onClear} className="text-[10px] text-gray-500 hover:text-gray-300 px-1">clear</button>
+        <button onClick={onClear} className="text-xs text-slate-400 hover:text-white px-1 underline">clear</button>
       </div>
-      <div className="font-mono text-[11px] text-cyan-200">{pt.lat.toFixed(5)}, {pt.lon.toFixed(5)}</div>
+      <div className="font-mono text-xs text-cyan-200">{pt.lat.toFixed(5)}, {pt.lon.toFixed(5)}</div>
 
       {!info && (
-        <div className="text-[11px] text-amber-400">Outside the elevation coverage ({grid ? grid.srcLabel : 'grid'}). Nothing is extrapolated here.</div>
+        <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">Outside the elevation coverage ({grid ? grid.srcLabel : 'grid'}). Nothing is extrapolated here.</div>
       )}
       {info && (
-        <div className="text-[12px] text-gray-100 leading-snug">
+        <div className="text-xs text-slate-100 leading-normal">
           {info.elev != null ? `${info.elev.toFixed(1)} m` : 'no elevation'}
           {info.slopeDeg != null && <> &middot; {info.slopeDeg.toFixed(1)}&deg; downhill toward {compass(info.downslopeBearing)}</>}
         </div>
       )}
-      {groundSummary && <div className="text-[11px] text-gray-200 leading-snug break-words">{groundSummary}</div>}
+      {groundSummary && <div className="text-xs text-slate-200 leading-normal break-words">{groundSummary}</div>}
       {region === 'jezero' && geology === null && (
-        <div className="text-[11px] text-gray-500">Ground: outside mapped SIM 3464 units</div>
+        <div className="text-xs text-slate-400">Ground: outside mapped SIM 3464 units</div>
       )}
 
       {nearest.length > 0 && (
         <div>
-          <div className="text-gray-500 text-[10px] mb-0.5">Nearest places</div>
+          <div className="text-slate-400 text-xs mb-1 font-medium">Nearest places</div>
           {nearest.map(({ s, dist, bearing }) => (
-            <div key={s.id} className="flex justify-between text-[10px] text-gray-300">
+            <div key={s.id} className="flex justify-between text-xs text-slate-300 py-0.5">
               <span className="truncate pr-1">{s.short || s.name}</span>
-              <span className="whitespace-nowrap text-gray-400">{fmtDist(dist)} {compass(bearing)}</span>
+              <span className="whitespace-nowrap text-slate-400 font-mono">{fmtDist(dist)} {compass(bearing)}</span>
             </div>
           ))}
         </div>
       )}
 
       {track && (
-        <div className="flex justify-between border-t border-gray-800/60 pt-1">
-          <span className="text-gray-500 text-[10px] max-w-[55%]">Nearest {region === 'gale' ? 'recorded drive' : 'recorded rover position'}</span>
-          <span className="text-[11px] text-gray-200">{fmtDist(track.dist)}</span>
+        <div className="flex justify-between border-t border-cyan-900/40 pt-1 text-xs">
+          <span className="text-slate-400 max-w-[55%]">Nearest {region === 'gale' ? 'recorded drive' : 'recorded rover position'}</span>
+          <span className="text-slate-200 font-mono">{fmtDist(track.dist)}</span>
         </div>
       )}
 
-      <details className="border-t border-gray-800 pt-1">
-        <summary className="cursor-pointer text-gray-500 text-[10px] select-none">Details &amp; sources</summary>
-        <div className="text-[9px] text-gray-500 space-y-1 mt-1 leading-snug">
+      <details className="disclosure mt-1">
+        <summary className="text-xs">Details &amp; sources</summary>
+        <div className="disclosure-body text-xs text-slate-300 space-y-1.5 leading-normal">
           {info && (
             <div>
               Elevation/slope from the {info.elevSrc || grid.srcLabel}; slope over one {gridM} m posting, not micro-relief.{hiGrid ? ' Routing still runs on the 20 m grid.' : ''} Not a walkability or safety rating - there is no obstacle dataset.
