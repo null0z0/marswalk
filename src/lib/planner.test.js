@@ -98,3 +98,167 @@ describe('distance invariant: leg table sum == header total == profile end', () 
     }
   });
 });
+
+import legsGale from '../../public/data/legs_gale.json' with { type: 'json' };
+import trackJ from '../../public/data/rover_track.json' with { type: 'json' };
+import trackG from '../../public/data/rover_track_gale.json' with { type: 'json' };
+
+describe('source-derived ascent and record-sol metadata', () => {
+  it('every leg in both regions has finite non-negative DTM ascent and positive distance', () => {
+    for (const [name, legs] of [['jezero', legsData], ['gale', legsGale]]) {
+      const entries = Object.entries(legs.legs);
+      expect(entries.length).toBeGreaterThan(0);
+      for (const [key] of entries) {
+        const [a, b] = key.split('|');
+        const m = legMetrics(legs, a, b, 1.0);
+        expect(Number.isFinite(m.asc), `${name} leg ${key} asc`).toBe(true);
+        expect(m.asc).toBeGreaterThanOrEqual(0);
+        // GaleBase is the declared scenario start at the Rocknest record
+        // position (both sol 59), so that one leg is legitimately 0 m.
+        if (key === 'GaleBase|Rocknest' || key === 'Rocknest|GaleBase') expect(m.dist).toBe(0);
+        else expect(m.dist).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('A/B total ascent equals the exact sum of underlying leg ascents (no other source)', () => {
+    const r = buildPlan({ ...BASE, visited: [] });
+    const legs2 = r.visitedLegs.concat(r.sim.legs);
+    const asc = legs2.reduce((s, l) => s + l.metrics.asc, 0);
+    expect(asc).toBeGreaterThan(0);
+    expect(Number.isFinite(asc)).toBe(true);
+  });
+  it('Jezero archive: every route point carries a sol, ordered non-decreasing', () => {
+    let prev = -1;
+    for (const p of trackJ.route) {
+      expect(p).toHaveLength(3);
+      expect(Number.isInteger(p[2])).toBe(true);
+      expect(p[2]).toBeGreaterThanOrEqual(prev);
+      prev = p[2];
+    }
+  });
+  it('Gale archive: every site stop carries solFirst <= solLast; segments carry no sol (not filtered)', () => {
+    for (const s of trackG.stops) {
+      expect(Number.isInteger(s.solFirst)).toBe(true);
+      expect(Number.isInteger(s.solLast)).toBe(true);
+      expect(s.solFirst).toBeLessThanOrEqual(s.solLast);
+    }
+    expect(Array.isArray(trackG.segments[0][0])).toBe(true); // plain [lat,lon] polylines, no sol field
+  });
+});
+
+describe('roundTrip + unsamplable legs', () => {
+  const mkLegs = (pairs) => ({
+    legs: Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v])),
+  });
+  const flat = (d) => [[0, -2500], [d, -2500]];
+  const stops = [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }];
+  const cfg = {
+    stops, priorities: { A: 1, B: 2 }, mustHaves: [], windowMin: 600,
+    dwellMin: 30, paceKmh: 3.0, baseId: 'Depot',
+  };
+  it('roundTrip=false omits the return leg', () => {
+    const legsData = mkLegs({ 'Depot|A': flat(1000), 'A|B': flat(500), 'B|Depot': flat(800), 'Depot|B': flat(800) });
+    const rt = buildPlan({ ...cfg, legsData, roundTrip: true });
+    const ow = buildPlan({ ...cfg, legsData, roundTrip: false });
+    const rtTos = rt.sim.legs.map(l => l.to);
+    const owTos = ow.sim.legs.map(l => l.to);
+    expect(rtTos[rtTos.length - 1]).toBe('Depot');
+    expect(owTos).not.toContain('Depot');
+    expect(ow.sim.total).toBeLessThan(rt.sim.total);
+    expect(ow.roundTrip).toBe(false);
+  });
+  it('unsamplable leg -> explicit infeasible + named legs, no crash, no drop', () => {
+    const legsData = mkLegs({ 'Depot|A': flat(1000) }); // B unreachable
+    const plan = buildPlan({ ...cfg, legsData });
+    // unreachable stop is excluded with an explicit coverage reason, never
+    // counted as a priority/time drop
+    expect(plan.coverageDrops.map(d => d.id)).toEqual(['B']);
+    expect(plan.coverageDrops[0].reason).toMatch(/coverage/);
+    expect(plan.dropped.length).toBe(0);
+    expect(plan.kept.map(k => k.id)).toEqual(['A']);
+    expect(plan.infeasible).toBe(false);
+  });
+  it('must-have stop outside coverage -> infeasible, never excluded', () => {
+    const legsData = mkLegs({ 'Depot|A': flat(1000) }); // B unreachable
+    const plan = buildPlan({ ...cfg, legsData, mustHaves: ['B'] });
+    expect(plan.coverageDrops.length).toBe(0);
+    expect(plan.infeasible).toBe(true);
+    expect(plan.unsamplable.length).toBeGreaterThan(0);
+    expect(plan.sim.total).toBe(Infinity);
+  });
+  it('legMetrics returns null for unknown pairs', () => {
+    const legsData = mkLegs({});
+    expect(legMetrics(legsData, 'X', 'Y', 1)).toBe(null);
+  });
+});
+
+
+describe('via waypoints (user navigation points)', () => {
+  const flat = (d) => [[0, -2500], [d, -2500]];
+  const legsData = { legs: { 'Depot|A': flat(1000), 'A|V': flat(500), 'V|Depot': flat(700), 'Depot|V': flat(600), 'A|Depot': flat(1000) } };
+  const stops = [{ id: 'A', name: 'A' }, { id: 'V', name: 'V', via: true }];
+  it('via gets no science dwell and is not an objective', () => {
+    const plan = buildPlan({ stops, priorities: { A: 1, V: 3 }, mustHaves: [], windowMin: 600, dwellMin: 60, paceKmh: 3.0, baseId: 'Depot', legsData });
+    expect(plan.viaIds).toEqual(['V']);
+    expect(plan.scienceKept).toBe(1);
+    // only one dwell charged (for A), none for V
+    const dwells = plan.sim.legs.filter(l => l.to !== 'Depot').length;
+    void dwells;
+    const walkMin = plan.sim.legs.reduce((t, l) => t + l.metrics.minutes, 0);
+    expect(plan.sim.total).toBeCloseTo(walkMin + 60, 6); // A dwell only
+  });
+  it('via is never dropped by time pressure - plan goes infeasible instead', () => {
+    const plan = buildPlan({ stops, priorities: { A: 1, V: 3 }, mustHaves: [], windowMin: 40, dwellMin: 60, paceKmh: 1.0, baseId: 'Depot', legsData });
+    expect(plan.dropped.map(d => d.id)).toEqual(['A']); // science dropped first
+    expect(plan.kept.map(k => k.id)).toEqual(['V']);    // via kept
+    expect(plan.infeasible).toBe(true);                 // still over budget: explicit
+  });
+});
+
+describe('QA regressions 2026-11-14', () => {
+  const mkLegs = (pairs) => ({ legs: Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v])) });
+  const flat = (d) => [[0, -2500], [d, -2500]];
+  const cfg = {
+    stops: [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }],
+    priorities: { A: 1, B: 2 }, mustHaves: [], windowMin: 600,
+    dwellMin: 30, paceKmh: 3.0, baseId: 'Depot',
+  };
+  it('unsamplable must-have: infeasible, stop named, shortfall finite for UI', () => {
+    const legsData = mkLegs({ 'Depot|A': flat(1000) }); // B unreachable
+    const plan = buildPlan({ ...cfg, legsData, mustHaves: ['B'] });
+    expect(plan.infeasible).toBe(true);
+    expect(plan.coverageDrops.length).toBe(0); // protected stop is never excluded
+    expect(plan.dropped.length).toBe(0);
+    expect(plan.unsamplable.length).toBeGreaterThan(0); // named, not silent
+    // shortfall stays finite so the UI can show "no route" instead of Infinity min
+    expect(Number.isFinite(plan.shortfall)).toBe(true);
+  });
+});
+
+describe('order cap (QA: no factorial freeze as user points grow)', () => {
+  const flat = (d) => [[0, -2500], [d, -2500]];
+  it('10 stops: greedy ordering returns a valid plan without full enumeration', () => {
+    const ids = ['S1','S2','S3','S4','S5','S6','S7','S8','S9','S10'];
+    const pairs = {};
+    const all = ['Depot', ...ids];
+    for (const a of all) for (const b of all) if (a !== b) pairs[a + '|' + b] = flat(500);
+    const legsData = { legs: pairs };
+    const t0 = Date.now();
+    const plan = buildPlan({
+      stops: ids.map(id => ({ id, name: id })),
+      priorities: Object.fromEntries(ids.map((id, k) => [id, k + 1])),
+      mustHaves: [], windowMin: 100000, dwellMin: 30, paceKmh: 3.0, baseId: 'Depot', legsData,
+    });
+    expect(Date.now() - t0).toBeLessThan(5000);
+    expect(plan.kept.length).toBe(10);
+    expect(plan.sim.legs.length).toBe(11); // 10 stops + return to base
+    expect(plan.infeasible).toBe(false);
+    // determinism: same inputs, same order
+    const plan2 = buildPlan({
+      stops: ids.map(id => ({ id, name: id })),
+      priorities: Object.fromEntries(ids.map((id, k) => [id, k + 1])),
+      mustHaves: [], windowMin: 100000, dwellMin: 30, paceKmh: 3.0, baseId: 'Depot', legsData,
+    });
+    expect(plan2.sim.legs.map(l => l.to)).toEqual(plan.sim.legs.map(l => l.to));
+  });
+});

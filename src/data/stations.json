@@ -1,48 +1,285 @@
 [
- {
-  "id": "Depot",
-  "name": "Base - Three Forks depot site",
-  "lat": 18.45253,
-  "lon": 77.40784,
-  "unit": "Njf (Jezero floor unit, SIM 3464 point-in-polygon)",
-  "objective": "Start/return point. Real Perseverance sample-depot location; the crewed habitat is hypothetical.",
-  "photo": null,
-  "photoNote": null,
-  "flags": [
-   "Hypothetical habitat at a real depot location",
-   "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, recorded while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point."
-  ],
-  "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json"
- },
- {
-  "id": "Wildcat",
-  "name": "Wildcat Ridge",
-  "lat": 18.45865,
-  "lon": 77.40592,
-  "unit": "NHjf2 (Jezero fan 2 unit, SIM 3464 point-in-polygon)",
-  "objective": "Fine-grained delta-front mudstones recording quiet-water deposition; the rover found organic signals correlated with sulfates here (not evidence of life).",
-  "photo": "/img/wildcat.jpg",
-  "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
-  "photoId": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
-  "flags": [
-   "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
-  ],
-  "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
- },
- {
-  "id": "Skinner",
-  "name": "Skinner Ridge",
-  "lat": 18.4589,
-  "lon": 77.40617,
-  "unit": "NHjf2 (Jezero fan 2 unit, SIM 3464 point-in-polygon)",
-  "objective": "Layered sandstone with grains transported from far outside Jezero - sediment provenance and transport energy.",
-  "photo": "/img/skinner.jpg",
-  "photoNote": "Mastcam-Z left 110mm frame, sol 477 (NASA raw image ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
-  "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
-  "flags": [
-   "Stop position = last recorded rover position near the Swift Run / Skyland sample location (samples sealed sols 490 and 495 at Skinner Ridge per the NASA samples catalog; sol-477 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
-   "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops"
-  ],
-  "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/"
- }
+  {
+    "id": "Depot",
+    "name": "Three Forks sample depot (recorded site)",
+    "lat": 18.45253,
+    "lon": 77.40784,
+    "unit": "Njf (Jezero floor unit, SIM 3464 point-in-polygon)",
+    "unitDescription": "Jezero floor unit: rugged, cratered floor unit of mafic composition, previously mapped as the 'volcanic floor unit' (USGS SIM 3464, Description of Map Units).",
+    "objective": "Start/return point. Real Perseverance sample-depot location; the crewed habitat is hypothetical.",
+    "flags": [
+      "Hypothetical habitat at a real depot location",
+      "Position = final rover drive record (sol 654) in the archived 2022-12-23 NASA M20 waypoints snapshot, recorded while the rover was emplacing the Three Forks depot (first tube deposited sol 653 per the NASA WATSON article on science.nasa.gov). The depot is an area, not a surveyed point.",
+      "No sol-653/654 rover image visibly shows the depot or a sample tube (both sol-654 Mastcam-Z 34 mm frames show featureless ground; sol 653 has only WATSON arm close-ups), so no Base context photo is shown."
+    ],
+    "flagsShort": [
+      "Hypothetical habitat at a real depot location.",
+      "Position = the rover's last recorded drive (sol 654) - a recorded point, not a surveyed depot spot.",
+      "No rover photo clearly shows the depot, so no context photo is shown."
+    ],
+    "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json",
+    "region": "jezero",
+    "short": "Three Forks depot",
+    "radiationUsGyPerDay": null,
+    "radiationType": null,
+    "radiationNote": "Not directly measured \u2014 no published surface RAD record for Jezero Crater. Estimate only."
+  },
+  {
+    "id": "Wildcat",
+    "name": "Wildcat Ridge",
+    "lat": 18.45865,
+    "lon": 77.40592,
+    "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+    "unitDescription": "Jezero fan unit 2: stratified fan deposit at the mouth of Neretva Vallis, associated with Fe/Mg clay and carbonate, previously mapped as the 'western fan deposit' (USGS SIM 3464, Description of Map Units).",
+    "objective": "Fine-grained delta-front mudstones recording quiet-water deposition; the rover found organic signals correlated with sulfates here (not evidence of life).",
+    "photo": "/img/wildcat.jpg",
+    "photoNote": "Mastcam-Z left 110mm frame, sol 502 (NASA raw image ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
+    "photoId": "ZL0_0502_0711509044_013EBY_N0261222ZCAM07101_1100LMJ",
+    "flags": [
+      "Stop position = last recorded rover position near the Hazeltop / Bearwallow sample location (samples sealed sols 509 and 516 at Wildcat Ridge per the NASA samples catalog; sol-502 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
+    ],
+    "flagsShort": [
+      "Position = last recorded rover position near the sample site - not the exact sample spot."
+    ],
+    "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
+    "region": "jezero",
+    "meda": "Measured on sol 502 by the rover's MEDA weather station (PDS calibrated products CAL_ATS/CAL_PS, units kelvin/pascal, no fill or special constants declared in the labels; the parsed columns contained no empty, non-numeric, or non-finite cells (39432 ATS + 38946 PS data rows plus one header line each; the labels' record counts 39433/38947 include the header). No instrument-quality filtering was applied beyond this. Air temperature by sensor in C, sol min-max: T1 -84.5 to -16.2, T2 -82.9 to -23.7, T3 -81.8 to -13.7, T4 -78.8 to -2.3, T5 -79.8 to -16.0. Sensor positions: T1 (RSM 50 deg), T2 (RSM 155 deg), T3 (RSM 290 deg), T4 (RFB port/pilot), T5 (RFB starboard/co-pilot). Surface pressure: BAROCAP1 779.8-818.8 Pa, BAROCAP2 770.0-809.3 Pa, BAROCAP3 770.0-809.1 Pa. Recorded context only - conditions are not used by the planner.",
+    "sol": 502,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
+  },
+  {
+    "id": "Skinner",
+    "name": "Skinner Ridge",
+    "lat": 18.4589,
+    "lon": 77.40617,
+    "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+    "unitDescription": "Jezero fan unit 2: stratified fan deposit at the mouth of Neretva Vallis, associated with Fe/Mg clay and carbonate, previously mapped as the 'western fan deposit' (USGS SIM 3464, Description of Map Units).",
+    "objective": "Layered sandstone with grains transported from far outside Jezero - sediment provenance and transport energy.",
+    "photo": "/img/skinner.jpg",
+    "photoNote": "Mastcam-Z left 110mm frame, sol 477 (NASA raw image ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ). NASA metadata confirms sol and camera; content attribution from the rover position that sol.",
+    "photoId": "ZL0_0477_0709275045_285EBY_N0260850ZCAM08498_1100LMJ",
+    "flags": [
+      "Stop position = last recorded rover position near the Swift Run / Skyland sample location (samples sealed sols 490 and 495 at Skinner Ridge per the NASA samples catalog; sol-477 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+      "Same outcrop complex as Wildcat: 20.96 m apart (about one 20 m DTM cell), from the two waypoint records - two distinct objectives, not two distant outcrops"
+    ],
+    "flagsShort": [
+      "Position = last recorded rover position near the sample site - not the exact sample spot.",
+      "20.96 m from Wildcat (about one 20 m grid cell) - two objectives, not two distant outcrops."
+    ],
+    "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
+    "region": "jezero",
+    "meda": "Measured on sol 477 by the rover's MEDA weather station (PDS calibrated products CAL_ATS/CAL_PS, units kelvin/pascal, no fill or special constants declared in the labels; the parsed columns contained no empty, non-numeric, or non-finite cells (30956 ATS + 30328 PS data rows plus one header line each; the labels' record counts 30957/30329 include the header). No instrument-quality filtering was applied beyond this. Air temperature by sensor in C, sol min-max: T1 -80.0 to -20.5, T2 -78.4 to -8.7, T3 -78.7 to -9.7, T4 -76.7 to -15.3, T5 -77.0 to -21.6. Sensor positions: T1 (RSM 50 deg), T2 (RSM 155 deg), T3 (RSM 290 deg), T4 (RFB port/pilot), T5 (RFB starboard/co-pilot). Surface pressure: BAROCAP1 777.5-819.8 Pa, BAROCAP2 766.8-809.9 Pa, BAROCAP3 767.0-809.8 Pa. Recorded context only - conditions are not used by the planner.",
+    "sol": 477,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
+  },
+  {
+    "id": "Kukaklek",
+    "name": "Kukaklek (Hidden Harbor)",
+    "lat": 18.45163,
+    "lon": 77.40144,
+    "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+    "unitDescription": "Clastic delta fan unit deposited by river inflow into Jezero paleolake (USGS SIM 3464).",
+    "objective": "Sedimentary rock core with varied textures and colors of sulfate minerals, indicating possible multiple water interactions.",
+    "photo": null,
+    "photoNote": null,
+    "flags": [
+      "Stop position = last recorded rover position near the Kukaklek sample location (sample sealed sol 631 at Hidden Harbor per the NASA samples catalog; sol-629 drive record in archived NASA M20 waypoints, no intervening drive records - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point."
+    ],
+    "flagsShort": [
+      "Position = last recorded rover position near the sample site - not the exact sample spot."
+    ],
+    "src": "https://science.nasa.gov/resource/meet-the-mars-samples-kukaklek-sample-16/",
+    "region": "jezero",
+    "sol": 629,
+    "radiationUsGyPerDay": null,
+    "radiationType": null,
+    "radiationNote": "Not directly measured \u2014 no published surface RAD record for Jezero Crater. Estimate only."
+  },
+  {
+    "id": "Shuyak",
+    "name": "Shuyak (Amalik outcrop)",
+    "lat": 18.45073,
+    "lon": 77.40144,
+    "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+    "unitDescription": "Jezero fan unit 2: stratified fan deposit at the mouth of Neretva Vallis, associated with Fe/Mg clay and carbonate, previously mapped as the 'western fan deposit' (USGS SIM 3464, Description of Map Units).",
+    "objective": "Sample 14: fine-grained, clay-bearing sedimentary rock from the 'Amalik' rock in the Delta Front - mudstone/siltstone deposited in a lake environment, collected for its biosignature-preservation potential (NASA samples catalog, samples 14/15 transcript).",
+    "photo": "/img/shuyak.jpg",
+    "photoNote": "Mastcam-Z left 110mm frame, sol 565 (NASA raw image ZL0_0565_0717112266_568EBY_N0290000ZCAM07115_1100LMJ). NASA metadata confirms sol and camera; content = terrain at the rover's recorded position that sol, not necessarily the sampled rock.",
+    "photoId": "ZL0_0565_0717112266_568EBY_N0290000ZCAM07115_1100LMJ",
+    "flags": [
+      "Stop position = last recorded rover position near the Shuyak sample location (sample sealed sol 575 at the Amalik outcrop per the NASA samples catalog; sol-565 record in the archived 2022-12-23 NASA M20 waypoints snapshot, no intervening drive records through sol 575 - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment."
+    ],
+    "flagsShort": [
+      "Position = last recorded rover position near the sample site - not the exact sample spot.",
+      "Same geology unit as the Delta Front stops - different samples and route, not a different environment."
+    ],
+    "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
+    "region": "jezero",
+    "sol": 565,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
+  },
+  {
+    "id": "Mageik",
+    "name": "Mageik (Amalik outcrop)",
+    "lat": 18.45364,
+    "lon": 77.39915,
+    "unit": "NHjf2 (Jezero fan unit 2, SIM 3464 point-in-polygon)",
+    "unitDescription": "Jezero fan unit 2: stratified fan deposit at the mouth of Neretva Vallis, associated with Fe/Mg clay and carbonate, previously mapped as the 'western fan deposit' (USGS SIM 3464, Description of Map Units).",
+    "objective": "Sample 15: second core from the 'Amalik' rock - fine-grained clay-bearing mudstone/siltstone paired with Shuyak; this tube was deposited at the Three Forks sample depot (NASA samples catalog, samples 14/15 transcript).",
+    "photo": "/img/mageik.jpg",
+    "photoNote": "Mastcam-Z left 110mm frame, sol 609 (NASA raw image ZL0_0609_0721008552_410EBY_N0301096ZCAM03478_1100LMJ). NASA metadata confirms sol and camera; content = terrain at the rover's recorded position that sol, not necessarily the sampled rock.",
+    "photoId": "ZL0_0609_0721008552_410EBY_N0301096ZCAM03478_1100LMJ",
+    "flags": [
+      "Stop position = last recorded rover position near the Mageik sample location (sample sealed sol 619 at the Amalik outcrop per the NASA samples catalog; sol-609 drive record in the archived 2022-12-23 NASA M20 waypoints snapshot, no intervening drive records through sol 619 - evidence for the last recorded position, not proof of the exact sample spot). The outcrop itself is not a surveyed point.",
+      "Same geology unit as the Delta Front scenario stops (NHjf2): this scenario offers different samples and route geometry, not a different environment."
+    ],
+    "flagsShort": [
+      "Position = last recorded rover position near the sample site - not the exact sample spot.",
+      "Same geology unit as the Delta Front stops - different samples and route, not a different environment."
+    ],
+    "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
+    "region": "jezero",
+    "sol": 609,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
+  },
+  {
+    "id": "GaleBase",
+    "name": "Base - scenario start at Rocknest (declared assumption)",
+    "region": "gale",
+    "lat": -4.5899957,
+    "lon": 137.4483418,
+    "unit": null,
+    "unitDescription": "Yellowknife Bay, Gale crater - a named mission region. No polygon-scale geology map found for this area, so no unit is claimed.",
+    "objective": "Start/return point. Declared scenario assumption placed at a real recorded rover position; no real installation exists or existed here.",
+    "flags": [
+      "Hypothetical start point at a real recorded position (MSL sol-59 waypoint record, site 5) in the NASA MSL waypoint archive.",
+      "Curiosity is a robotic rover; there is no base, depot or habitat at this location. The base marker is a scenario convention, not a mapped feature."
+    ],
+    "flagsShort": [
+      "Hypothetical start at a real recorded rover position (sol 59).",
+      "No real base or habitat exists here - the base marker is a scenario convention."
+    ],
+    "src": "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json",
+    "short": "Scenario start (sol 59)",
+    "sol": 59,
+    "scenarioOnly": true,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day). Same coordinates as Rocknest."
+  },
+  {
+    "id": "Rocknest",
+    "name": "Rocknest sand patch (first scoop)",
+    "region": "gale",
+    "lat": -4.5899957,
+    "lon": 137.4483418,
+    "unit": null,
+    "unitDescription": "Yellowknife Bay, Gale crater - named mission region; no polygon-scale geology map found.",
+    "objective": "First soil scoop of the mission: dust and sand sampled for CheMin and SAM (first scoop sol 61, third scoop delivered to CheMin sol 71).",
+    "flags": [
+      "Stop position = MSL sol-59 waypoint record (site 5); the rover worked the Rocknest patch across sols ~57-100, so this is the recorded rover position at the patch, not a surveyed scoop point.",
+      "Event and name source: NASA JPL PIA16173 page (scoop photos and sols)."
+    ],
+    "flagsShort": [
+      "Position = the recorded rover position at the patch (sol 59), not a surveyed scoop point."
+    ],
+    "src": "https://www.jpl.nasa.gov/images/pia16173-curiosity-digs-in/",
+    "short": "Rocknest",
+    "photo": "/img/gale/rocknest.jpg",
+    "photoId": "0059ML0002690010102306E01",
+    "photoNote": "MSL Mastcam left frame (0059ML0002690010102306E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/29246",
+    "sol": 59,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
+  },
+  {
+    "id": "Shaler",
+    "name": "Shaler outcrop viewpoint",
+    "region": "gale",
+    "lat": -4.5904425,
+    "lon": 137.4488299,
+    "unit": null,
+    "unitDescription": "Glenelg area / Yellowknife Bay margin, Gale crater - named mission region; no polygon-scale geology map found.",
+    "objective": "Cross-bedded layered outcrop imaged by Mastcam on sol 120 - evidence of ancient water flows; last science target before departure (per NASA pages).",
+    "flags": [
+      "Stop position = the rover's RECORDED VIEWPOINT (MSL sol-120 waypoint record, site 5) when Mastcam imaged Shaler. The Shaler outcrop's own coordinate is not surveyed in any source used; this marker is where the rover stood, not the outcrop.",
+      "Event and name source: NASA Science PIA16550 page (sol 120 Mastcam view, Glenelg area)."
+    ],
+    "flagsShort": [
+      "Position = the rover's recorded viewpoint (sol 120) - where the rover stood, not the outcrop itself."
+    ],
+    "src": "https://science.nasa.gov/resource/layered-martian-outcrop-shaler-in-glenelg-area/",
+    "short": "Shaler",
+    "photo": "/img/gale/shaler.jpg",
+    "photoId": "0120ML0007520010103767E01",
+    "photoNote": "MSL Mastcam left frame (0120ML0007520010103767E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/42459",
+    "sol": 120,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
+  },
+  {
+    "id": "JohnKleinCumberland",
+    "name": "John Klein & Cumberland drill sites",
+    "region": "gale",
+    "lat": -4.5894849,
+    "lon": 137.4491296,
+    "unit": null,
+    "unitDescription": "Yellowknife Bay (Sheepbed mudstone), Gale crater - named mission region; no polygon-scale geology map found.",
+    "objective": "First (John Klein, sol 182) and second (Cumberland, sol 279) rocks ever drilled on Mars; Sheepbed mudstone with evidence of an ancient habitable environment (NASA pages).",
+    "flags": [
+      "One walking stop for both drills: JPL reports Cumberland lies 2.75 m west of John Klein, both in Yellowknife Bay.",
+      "Stop position = MSL sol-166 waypoint record (site 6), the nearest earlier record to the John Klein drill sol. No waypoint record exists exactly at either drill sol; the rover was parked within site 6 across the drilling period (records at sols 166, 272 and 274 sit within ~4 m of each other). Not a surveyed drill-point coordinate.",
+      "Sources: NASA Science PIA16832 page (John Klein location map) and JPL news 2013-05-20 (Cumberland, sol 279, 2.75 m west)."
+    ],
+    "flagsShort": [
+      "One walking stop for both drill sites (2.75 m apart).",
+      "Position = nearest recorded rover position (sol 166) - not a surveyed drill point."
+    ],
+    "src": "https://science.nasa.gov/resource/location-of-john-klein-drill-site/",
+    "short": "Drill sites",
+    "photo": "/img/gale/drillsites.jpg",
+    "photoId": "0182ML0007400000105276E01",
+    "photoNote": "MSL Mastcam left frame (0182ML0007400000105276E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/57908",
+    "sol": 166,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
+  },
+  {
+    "id": "Departure",
+    "name": "Yellowknife Bay departure (Mount Sharp trek begins)",
+    "region": "gale",
+    "lat": -4.5902026,
+    "lon": 137.4487282,
+    "unit": null,
+    "unitDescription": "Yellowknife Bay margin, Gale crater - named mission region; no polygon-scale geology map found.",
+    "objective": "Sol 324: first drive of the months-long trek to Mount Sharp, leaving the Glenelg / Yellowknife Bay work area (JPL news 2013-07-08).",
+    "flags": [
+      "Stop position = MSL sol-324 waypoint record (site 7), the recorded end position of the 18 m departure drive reported by JPL.",
+      "Source: JPL news 2013-07-08 'Mars Rover Curiosity Begins Trek Toward Mount Sharp'."
+    ],
+    "flagsShort": [
+      "Position = recorded end of the 18 m departure drive (sol 324)."
+    ],
+    "src": "https://www.jpl.nasa.gov/news/mars-rover-curiosity-begins-trek-toward-mount-sharp/",
+    "short": "Departure",
+    "photo": "/img/gale/departure.jpg",
+    "photoId": "0324ML0013150010107838E01",
+    "photoNote": "MSL Mastcam left frame (0324ML0013150010107838E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/80376",
+    "sol": 324,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
+  }
 ]

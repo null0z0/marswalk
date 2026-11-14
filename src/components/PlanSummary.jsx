@@ -1,43 +1,143 @@
-export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh }) {
+import stations from '../data/stations.json';
+const SHORT = Object.fromEntries(stations.map(x => [x.id, x.short || (x.id === 'Depot' ? 'Base' : x.name.split(' ')[0])]));
+const nm = id => id === undefined ? '' : (SHORT[id] || id);
+
+export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNote = 'elevation grid', planA = null, onPinA = null, onClearA = null, routeModel = 'straight' }) {
+  const via = new Set(plan.viaIds || []);
+  const routeLegs = plan.visitedLegs.concat(plan.sim.legs);
+  const routeKm = routeLegs.reduce((a, l) => a + l.metrics.dist, 0) / 1000;
+  const routeAsc = routeLegs.reduce((a, l) => a + l.metrics.asc, 0);
   const total = plan.elapsed + plan.sim.total;
   const fits = total <= windowMin;
-  const nm = id => id === 'Depot' ? 'Base' : id;
-  const objTotal = plan.visitedLegs.length + plan.kept.length + plan.dropped.length;
   let clock = 0;
+
   return (
-    <div className="p-3 bg-[#101826] rounded border border-cyan-900 text-xs">
-      <h3 className="text-[11px] uppercase tracking-wider text-cyan-400 mb-1">Plan</h3>
-      {plan.dropped.length > 0 && (
-        <div className="mb-2 p-2 bg-[#0d1420] border border-cyan-400 rounded">
-          <div className="font-bold text-cyan-300">MISSION DECISION: {plan.dropped.map(d => d.name).join(', ')} deferred</div>
-          <div>{plan.visitedLegs.length + plan.kept.length} of {objTotal} objectives retained</div>
-          <div>Lost: {plan.dropped.map(d => d.objective).join('; ')}</div>
-          <div className="mt-1">Dropping {plan.dropped.map(d => d.name).join(', ')} saves <b>{Math.max(0, Math.round(plan.full.total - plan.sim.total))} min</b> ({Math.round(plan.elapsed + plan.full.total)} min with every objective vs {Math.round(plan.elapsed + plan.sim.total)} min now).</div>
+    <section className="panel text-xs space-y-2.5">
+      <div className="eyebrow">Mission plan summary</div>
+
+      {plan.baseUnsamplable && (
+        <div className="p-2.5 bg-red-950/40 border border-red-500/50 rounded-lg text-red-200 text-xs">
+          <b>Start point is outside elevation coverage.</b> No route can be computed — select a start point inside the coverage frame. Nothing was silently altered.
         </div>
       )}
-      <table className="w-full font-mono text-[10px]">
-        <thead><tr className="text-gray-500"><th className="text-left pr-2">Leg</th><th className="px-2">Dist</th><th className="px-2">Asc</th><th className="pl-3">Time</th></tr></thead>
-        <tbody>
-          {plan.visitedLegs.map((l, i) => {
-            clock += l.walkMin + l.dwellUsed;
-            return <tr key={'v' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(done @ {l.paceUsed.toFixed(1)})</div></td></tr>;
-          })}
-          {plan.sim.legs.map((l, i) => {
-            const dwellPart = l.to === 'Depot' ? 0 : dwellMin;
-            clock += l.metrics.minutes + dwellPart;
-            return <tr key={'s' + i}><td className="whitespace-nowrap">{nm(l.from)} → {nm(l.to)}</td><td className="text-right px-2">{l.metrics.dist.toFixed(0)}m</td><td className="text-right px-2">+{l.metrics.asc.toFixed(0)}m</td><td className="text-right pl-3 whitespace-nowrap"><div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div><div className="text-gray-500 text-[9px]">(end {Math.round(clock)})</div></td></tr>;
-          })}
-        </tbody>
-      </table>
-      <div className="mt-1 font-mono">Total <b>{Math.round(total)}</b> / {Math.round(windowMin)} min {fits ? <span className="text-green-400 font-bold">FITS</span> : <span className="text-red-400 font-bold">DOES NOT FIT</span>}</div>
-      {plan.dropped.length > 0 && (
-        <div className="mt-1 text-red-400">
-          Deferred ({plan.dropped[0].reason}): <b>{plan.dropped.map(d => d.name).join(', ')}</b> - objective lost this EVA: <i>{plan.dropped.map(d => d.objective).join('; ')}</i>
-          <div className="text-gray-400">vs full plan: {Math.max(0, plan.savedDist).toFixed(0)} m and {Math.max(0, plan.savedAsc).toFixed(0)} m ascent not walked; deferred objectives could be a later sol.</div>
+      {(plan.coverageDrops || []).length > 0 && (
+        <div className="p-2.5 bg-amber-950/40 border border-amber-500/50 rounded-lg text-amber-200 text-xs">
+          <b>Cannot compute route to: {plan.coverageDrops.map(d => d.name).join(', ')}</b> — outside elevation coverage. Removed with explicit rationale.
         </div>
       )}
-      {plan.infeasible && <div className="mt-1 text-red-400 font-bold">INFEASIBLE: must-have stations exceed the remaining window by {Math.round(plan.shortfall)} min. Increase the window or change assumptions - no station was silently dropped.</div>}
-      <div className="mt-1 text-[9px] text-gray-500">Times: declared {paceKmh.toFixed(1)} km/h on horizontal straight-line distance between waypoints (geometric, waypoint-derived); heights and ascent from the 20m DTM (nearest-cell samples every 10m along each straight segment; not a surveyed path; 20m is grid spacing, not a vertical-accuracy guarantee; geometry only - no human-safety or walkability claim).</div>
-    </div>
+      {(plan.unsamplable || []).length > 0 && !plan.baseUnsamplable && !(plan.coverageDrops || []).length && (
+        <div className="p-2.5 bg-red-950/40 border border-red-500/50 rounded-lg text-red-200 text-xs">
+          <b>Route cannot be computed</b> — leg(s) {plan.unsamplable.map(u => `${nm(u.from)} → ${nm(u.to)}`).join(', ')} leave elevation coverage or cross missing data.
+        </div>
+      )}
+
+      <div className="plan-table-wrap">
+        <table className="plan-table">
+          <thead>
+            <tr>
+              <th>Leg</th>
+              <th className="num">Dist</th>
+              <th className="num">Asc</th>
+              <th className="num">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plan.visitedLegs.map((l, i) => {
+              clock += l.walkMin + l.dwellUsed;
+              return (
+                <tr key={'v' + i}>
+                  <td>
+                    <span className="leg-status">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 inline-block" />
+                      <span>{nm(l.from)} → {nm(l.to)}</span>
+                    </span>
+                  </td>
+                  <td className="num">{l.metrics.dist.toFixed(0)} m</td>
+                  <td className="num">+{l.metrics.asc.toFixed(0)} m</td>
+                  <td className="num">
+                    <div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div>
+                    <span className="row-sub">done @ {l.paceUsed.toFixed(1)}</span>
+                  </td>
+                </tr>
+              );
+            })}
+            {plan.sim.legs.map((l, i) => {
+              const dwellPart = (l.to === (plan.baseId || 'Depot') || l.via || via.has(l.to)) ? 0 : dwellMin;
+              clock += l.metrics.minutes + dwellPart;
+              return (
+                <tr key={'s' + i}>
+                  <td>
+                    <span className="leg-status">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 inline-block" />
+                      <span>{nm(l.from)} → {nm(l.to)}{(l.via || via.has(l.to)) ? <span className="text-slate-400"> (via)</span> : null}</span>
+                    </span>
+                  </td>
+                  <td className="num">{l.metrics.dist.toFixed(0)} m</td>
+                  <td className="num">+{l.metrics.asc.toFixed(0)} m</td>
+                  <td className="num">
+                    <div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div>
+                    <span className="row-sub">end {Math.round(clock)}m</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between pt-1 font-mono text-xs">
+        <span className="text-slate-300">Total: <b>{isFinite(total) ? Math.round(total) : '—'}</b> / {Math.round(windowMin)} min</span>
+        <span className={`status-tag ${fits ? 'status-tag--nominal' : 'status-tag--bad'}`}>
+          {fits ? 'Fits budget' : 'Exceeds budget'}
+        </span>
+      </div>
+
+      {plan.roundTrip === false && (
+        <div className="text-xs text-amber-300 font-mono">
+          One-way plan: ends at last stop; no return leg counted.
+        </div>
+      )}
+
+      {plan.dropped.length > 0 && (
+        <div className="text-rose-400 text-xs space-y-1">
+          <div>Deferred ({plan.dropped[0].reason}): <b>{plan.dropped.map(d => d.name).join(', ')}</b></div>
+          <div className="text-slate-400 text-xs">
+            vs full plan: {Math.max(0, plan.savedDist).toFixed(0)} m and {Math.max(0, plan.savedAsc).toFixed(0)} m ascent saved.
+          </div>
+        </div>
+      )}
+
+      {plan.infeasible && isFinite(plan.sim.total) && (
+        <div className="text-rose-400 font-bold text-xs">
+          Infeasible: must-have stations exceed the remaining window by {Math.round(plan.shortfall)} min. Increase the window or change assumptions.
+        </div>
+      )}
+
+      {onPinA && (
+        <div className="pt-2 border-t border-cyan-900/40">
+          {!planA ? (
+            <button type="button" onClick={onPinA} className="btn btn-secondary btn-sm w-full">
+              Pin as Plan A (compare)
+            </button>
+          ) : (
+            <div className="text-xs font-mono space-y-1 bg-[#070d18]/60 p-2 rounded-lg border border-cyan-900/50">
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-400 font-bold uppercase tracking-wider">A/B Compare</span>
+                <button type="button" onClick={onClearA} className="text-slate-400 hover:text-white underline text-xs">clear A</button>
+              </div>
+              <div>A: {Math.round(planA.total)} min, {planA.km.toFixed(2)} km, +{Math.round(planA.asc)} m ascent, {planA.kept} objectives kept{planA.dropped.length ? ` (${planA.dropped.join(', ')} deferred)` : ''}</div>
+              <div>B (current): {Math.round(total)} min, {routeKm.toFixed(2)} km, +{Math.round(routeAsc)} m ascent, {plan.visitedLegs.filter(l => !via.has(l.to)).length + (plan.scienceKept ?? plan.kept.length)} objectives kept{plan.dropped.length ? ` (${plan.dropped.map(d => SHORT[d.id] || d.name).join(', ')} deferred)` : ''}</div>
+              <div className={total <= planA.total ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                {total === planA.total ? 'Same total duration' : `Plan B is ${Math.abs(Math.round(total - planA.total))} min ${total < planA.total ? 'faster' : 'slower'} than A`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="text-xs text-slate-400 leading-normal">
+        Times: declared {paceKmh.toFixed(1)} km/h on {routeModel === 'leastcost' ? 'least-cost path geometry (slope-aware model over elevation grid)' : 'horizontal straight-line distance'}; heights from {dtmNote}. Not a human-safety claim.
+      </div>
+    </section>
   );
 }

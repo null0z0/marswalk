@@ -1,0 +1,9 @@
+{
+ "nx": 971,
+ "ny": 821,
+ "dx": 4.0,
+ "x0": 4586362.3513494255,
+ "y0": 1095694.646211346,
+ "bin": "/data/heightmap_jezero_4m.bin",
+ "srcLabel": "USGS Jezero delta front DTM 4 m (CC0, DOI 10.5066/P9REJ9JN)"
+}

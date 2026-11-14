@@ -11,6 +11,8 @@ Coordinate selection (per audit rule "matched to the sol of the sample"):
   sampling campaign (Swift Run sol 490, Skyland sol 495).
 - Base (Three Forks depot): rover drive record sol 654 during depot emplacement
   (first tube deposited sol 653); the depot is an area, not a point.
+- Shuyak: rover record sol 565; parked through the Shuyak sampling (sealed sol 575).
+- Mageik: rover drive record sol 609; parked through the Mageik sampling (sealed sol 619).
 - Kodiak: UNAVAILABLE - no numeric coordinate in opened sources; removed from data.
 """
 import json
@@ -20,6 +22,9 @@ SRC = {
     'Wildcat': ('data_raw/waypoints_2022-07-19.json', 502),
     'Skinner': ('data_raw/waypoints_2022-06-26.json', 477),
     'Depot': ('data_raw/waypoints_2022-12-23.json', 654),
+    'Kukaklek': ('data_raw/waypoints_2022-12-23.json', 629),
+    'Shuyak': ('data_raw/waypoints_2022-12-23.json', 565),
+    'Mageik': ('data_raw/waypoints_2022-12-23.json', 609),
 }
 ok = True
 for sid, (path, sol) in SRC.items():

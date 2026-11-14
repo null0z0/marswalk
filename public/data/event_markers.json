@@ -1,0 +1,45 @@
+{
+  "note": "Map anchors for the historical-event archive (src/data/historicalEvents.json, corrected v1.1 records). kind=point: a verified coordinate, source cited in anchorNote. kind=region: the record is region-level; the marker sits at the region's official IAU/USGS Gazetteer center for orientation and is NOT an event position. No anchor is invented: events without a verified coordinate get no point marker anywhere.",
+  "markers": [
+    {
+      "id": "evm-insight",
+      "kind": "point",
+      "lat": 4.5,
+      "lon": 135.62,
+      "eventIds": ["insight-m5-quake-2022-05-04", "insight-first-quake-2019-04-06"],
+      "anchorNote": "Marker = the InSight lander (existing verified mission-site position), the DETECTION site of both seismic records - NOT the epicenters. The 2022 quake's epicenter was later placed close to but outside the Cerberus Fossae region, over 2000 km away; the 2019 record's source does not fix an epicenter."
+    },
+    {
+      "id": "evm-amazonis-impact",
+      "kind": "point",
+      "lat": 35.1,
+      "lon": -170.18,
+      "eventIds": ["amazonis-impact-2021-12-24"],
+      "anchorNote": "The impact crater itself, located by MRO before/after imaging at 35.1 N, 189.82 E (Posiolova et al., Science 2022, as restated in doi.org/10.1029/2024JE008875). Seismic detection was by InSight, thousands of km away."
+    },
+    {
+      "id": "evm-polar-avalanches",
+      "kind": "point",
+      "lat": 83.7,
+      "lon": -124.2,
+      "eventIds": ["north-polar-avalanches-2008-02-19"],
+      "anchorNote": "Coordinates from the HiRISE observation metadata (~83.7 N, 235.8 E, cited in the event record)."
+    },
+    {
+      "id": "evm-jezero-region",
+      "kind": "region",
+      "lat": 18.4082,
+      "lon": 77.6873,
+      "eventIds": ["jezero-dust-storm-2022-01", "jezero-dust-devil-audio-2021-09-27", "jezero-dust-devil-sol899", "jezero-dust-devil-merge-2025-01-25"],
+      "anchorNote": "Marker = Jezero crater center (IAU/USGS Gazetteer, 47.5 km crater) for orientation only. These four records are crater-level context: no exact event positions are pinned. The Sol 215 record happened at the rover; the Sol 899 / Sol 1398 dust devils were imaged kilometers AWAY from the rover (not at it); the Jan 2022 storm was regional."
+    },
+    {
+      "id": "evm-gale-region",
+      "kind": "region",
+      "lat": -5.3672,
+      "lon": 137.811,
+      "eventIds": ["gale-global-dust-storm-2018", "gale-dust-devil-sol1597"],
+      "anchorNote": "Marker = Gale crater center (IAU/USGS Gazetteer, 154 km crater) for orientation only. Both records are crater-level context: the 2018 event was planet-encircling (observed in-situ by Curiosity) and the Sol 1597 dust devil was seen at a distance from the rover - no exact positions pinned."
+    }
+  ]
+}
