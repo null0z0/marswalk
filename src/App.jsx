@@ -66,6 +66,7 @@ export default function App() {
   // see the route between them. No assumed base, no automatic return.
   const [abFrom, setAbFrom] = useState(null);
   const [abTo, setAbTo] = useState(null);
+  const [routeVisible, setRouteVisible] = useState(true);
   // Gale: optionally follow Curiosity's recorded drive path between the pair
   const [followTraverse, setFollowTraverse] = useState(false);
   const [allowTraverseConnectors, setAllowTraverseConnectors] = useState(false);
@@ -156,6 +157,21 @@ export default function App() {
   // (e.g. GaleBase, a hypothetical start at a recorded position) stay in the
   // planner, never in the real-place catalog or From/To selectors.
   const realPlaces = useMemo(() => scenarioStations.filter(s => !s.scenarioOnly), [scenarioStations]);
+
+  // The two endpoints resolved to coordinates + labels for the Global View
+  // distance visualization. Real places only - no scenario-only or custom
+  // waypoints are fabricated as globe endpoints.
+  const globeEndpoints = useMemo(() => {
+    if (!abFrom || !abTo || abFrom === abTo) return null;
+    const a = ptsOf(abFrom), b = ptsOf(abTo);
+    if (!a || !b) return null;
+    const sa = realPlaces.find(x => x.id === abFrom) || {};
+    const sb = realPlaces.find(x => x.id === abTo) || {};
+    return [
+      { lat: a.lat, lon: a.lon, label: sa.short || sa.name || abFrom },
+      { lat: b.lat, lon: b.lon, label: sb.short || sb.name || abTo },
+    ];
+  }, [abFrom, abTo, ptsOf, realPlaces]);
 
   const abMetrics = useMemo(() => {
     if (!activeLegs || !abFrom || !abTo || abFrom === abTo) return null;
@@ -453,7 +469,13 @@ export default function App() {
               inert={viewMode === 'global' ? undefined : true }
             >
               {viewMode === 'global' && (
-                <GlobalView onOpenRegion={(r) => { switchScenario(r === 'gale' ? 'gale' : 'delta'); setViewMode('2d'); }} />
+                <GlobalView
+                  onOpenRegion={(r) => { switchScenario(r === 'gale' ? 'gale' : 'delta'); setViewMode('2d'); }}
+                  endpoints={globeEndpoints}
+                  routeModel={routeModel}
+                  routeVisible={routeVisible}
+                  onToggleRoute={() => setRouteVisible(v => !v)}
+                />
               )}
             </div>
 

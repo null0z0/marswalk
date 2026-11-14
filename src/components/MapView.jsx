@@ -232,46 +232,174 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
         </div>
       )}
 
-      {/* Layers panel */}
-      <details className="absolute top-2 left-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[240px] shadow-lg">
-        <summary className="cursor-pointer font-bold text-cyan-400 select-none">Layers</summary>
-        <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
-          <div className="text-gray-500">Features (each shows with its own shape / line style):</div>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} /> <span className="w-3 h-0.5 bg-[#22d3ee] inline-block"></span> Planned route (your plan, stop to stop)</label>
-          {layers.plannedRoute && setRouteModel && (
-            <label className="flex items-center gap-1.5 pl-4">Model
-              <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)} className="bg-[#0a0e17] border border-cyan-900 rounded px-1 py-0.5 text-[10px]">
-                <option value="straight">Straight line (geometric baseline)</option>
-                <option value="leastcost">Least-cost over terrain (slope-aware)</option>
-              </select>
-            </label>)}
-          {layers.plannedRoute && routeModel === 'leastcost' && (
-            <div className="pl-4 text-[9px] text-gray-500">A* over the elevation grid: no-data ground impassable, steep slopes cost more. A model under declared rules, not a surveyed or safe path. Times/distances follow this geometry.</div>)}
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} /> <span className="w-3 border-t border-dashed border-[#cc3333] inline-block"></span> Deferred legs</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} /> Science objectives (shape per stop)</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} /> <span className="w-2 h-2 rounded-full bg-white border border-black inline-block"></span> Base</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} /> <span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] inline-block"></span> Your waypoints</label>
-          {region === 'jezero' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} /> USGS geology (SIM 3464 - semi-controlled CTX basemap, registration offset ~100-200 m vs rover waypoint records: unit boundaries are approximate at stop scale, not contact-level)</label>}
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} /> {roverTrack && roverTrack.segments ? 'NASA recorded traverse geometry' : 'Recorded rover positions (connected)'}</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} /> Recorded rover stops</label>
-          {region === 'gale' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} /> CRISM 770 nm reflectance (JHU/APL 2012 targeted mosaic, source resolution 19-38 m/px (FRT ~19 m, HRL ~38 m) - brightness only, NOT a mineral map; cropped with an integer-pixel window-edge match, so small spatial offsets up to about one 19 m source pixel are possible)</label>}
-          {terrainMeta && <div className="pt-1 border-t border-gray-800 text-gray-500">Derived from the elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - views of the same data, not independent measurements:</div>}
-          {terrainMeta && OVERLAY_LAYERS(region).map(ol => (
-            <label key={ol.key} className="flex items-center gap-1.5"><input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} /> {ol.label}</label>
-          ))}
-          {terrainMeta && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} /> Contours{terrainMeta ? ` (${terrainMeta.contourIntervalM} m)` : ''}</label>}
-          {terrainMeta && <label className="flex items-center gap-1.5 pt-1 border-t border-gray-800">
-            Overlay opacity
-            <input type="range" min="0.15" max="0.9" step="0.05" value={layers.overlayOpacity}
-              onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value }))} className="w-20" />
-          </label>}
-          {terrainMeta && (
-            <div className="pt-1 border-t border-gray-800 text-[9px] text-gray-500 space-y-0.5">
-              <div>Elevation {terrainMeta.elevMin} to {terrainMeta.elevMax} m (viridis ramp)</div>
-              <div>Slope 0 to {terrainMeta.slopeMaxDeg}&deg; at {terrainMeta.gridM} m grid - steepness display, not a safety rating</div>
-              <div>Contours every {terrainMeta.contourIntervalM} m</div>
+      {/* Layers panel — collapsible control groups */}
+      <details className="absolute top-2 left-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded shadow-lg max-w-[270px]">
+        <summary className="cursor-pointer flex items-center justify-between gap-8 px-3 py-2 font-bold text-cyan-400 select-none">
+          <span>Layers</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div className="layers-panel p-3 space-y-4">
+          {/* 1. Route Visualization */}
+          <details className="layer-group">
+            <summary className="layer-head">
+              <span className="layer-title">Route visualization</span>
+              <span className="layer-count">{[layers.plannedRoute, layers.droppedLegs].filter(Boolean).length}/2</span>
+            </summary>
+            <div className="layer-body">
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} />
+                <span className="layer-check-box"></span>
+                Planned route (your plan, stop to stop)
+              </label>
+              {layers.plannedRoute && setRouteModel && (
+                <>
+                  <div className="layer-model-row">
+                    <span className="text-[9px] text-gray-500">Model</span>
+                    <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)} className="bg-[#0a0e17] border border-cyan-900 rounded px-1.5 py-0.5 text-[10px] text-gray-200">
+                      <option value="straight">Straight line (geometric baseline)</option>
+                      <option value="leastcost">Least-cost over terrain (slope-aware)</option>
+                    </select>
+                  </div>
+                  {routeModel === 'leastcost' && (
+                    <div className="layer-desc">A* over the elevation grid: no-data ground impassable, steep slopes cost more. A declared model, not a surveyed or safe path. Times/distances follow this geometry.</div>
+                  )}
+                </>
+              )}
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} />
+                <span className="layer-check-box"></span>
+                Deferred / dropped legs
+              </label>
             </div>
+          </details>
+
+          {/* 2. Rover Records */}
+          <details className="layer-group">
+            <summary className="layer-head">
+              <span className="layer-title">Rover records</span>
+              <span className="layer-count">{[layers.roverRoute, layers.roverStops].filter(Boolean).length}/2</span>
+            </summary>
+            <div className="layer-body">
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} />
+                <span className="layer-check-box"></span>
+                {roverTrack && roverTrack.segments ? 'NASA recorded traverse geometry' : 'Recorded rover positions (connected)'}
+              </label>
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} />
+                <span className="layer-check-box"></span>
+                Recorded rover stops
+              </label>
+            </div>
+          </details>
+
+          {/* 3. Science Objectives */}
+          <details className="layer-group">
+            <summary className="layer-head">
+              <span className="layer-title">Science objectives</span>
+              <span className="layer-count">{[layers.objectives, layers.baseMarker, layers.userWps].filter(Boolean).length}/3</span>
+            </summary>
+            <div className="layer-body">
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} />
+                <span className="layer-check-box"></span>
+                Science objectives (shape per stop)
+              </label>
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} />
+                <span className="layer-check-box"></span>
+                Base
+              </label>
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} />
+                <span className="layer-check-box"></span>
+                Your waypoints
+              </label>
+            </div>
+          </details>
+
+          {/* 4. Geological Data */}
+          <details className="layer-group">
+            <summary className="layer-head">
+              <span className="layer-title">Geological data</span>
+              <span className="layer-count">{[(region === 'jezero' && layers.geology), (region === 'gale' && layers.crismVna)].filter(Boolean).length}/1</span>
+            </summary>
+            <div className="layer-body">
+              {region === 'jezero' && (
+                <>
+                  <label className="layer-check">
+                    <input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} />
+                    <span className="layer-check-box"></span>
+                    USGS geology (SIM 3464)
+                  </label>
+                  <div className="layer-desc">Semi-controlled CTX basemap; registration offset ~100-200 m vs rover waypoint records - unit boundaries are approximate at stop scale, not contact-level.</div>
+                </>
+              )}
+              {region === 'gale' && (
+                <>
+                  <label className="layer-check">
+                    <input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} />
+                    <span className="layer-check-box"></span>
+                    CRISM 770 nm reflectance
+                  </label>
+                  <div className="layer-desc">Brightness only, NOT a mineral map (JHU/APL 2012). Small spatial offsets up to about one source pixel are possible.</div>
+                </>
+              )}
+            </div>
+          </details>
+
+          {/* 5. Terrain Visualization */}
+          {terrainMeta && (
+            <details className="layer-group">
+              <summary className="layer-head">
+                <span className="layer-title">Terrain visualization</span>
+                <span className="layer-count">{layers.contours ? 1 : 0}/1</span>
+              </summary>
+              <div className="layer-body">
+                <label className="layer-check">
+                  <input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} />
+                  <span className="layer-check-box"></span>
+                  Contours ({terrainMeta.contourIntervalM} m)
+                </label>
+              </div>
+            </details>
           )}
+
+          {/* 6. Elevation and Slope Overlays */}
+          {terrainMeta && (
+            <details className="layer-group">
+              <summary className="layer-head">
+                <span className="layer-title">Elevation &amp; slope overlays</span>
+                <span className="layer-count">{[layers.elevRamp, layers.hillshade, layers.slope].filter(Boolean).length}/3</span>
+              </summary>
+              <div className="layer-body">
+                <div className="text-gray-500 text-[9px] mb-2">Derived from the elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - views of the same data, not independent measurements:</div>
+                {OVERLAY_LAYERS(region).map(ol => (
+                  <label key={ol.key} className="layer-check">
+                    <input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} />
+                    <span className="layer-check-box"></span>
+                    {ol.label}
+                  </label>
+                ))}
+                <label className="layer-check layer-opacity-row">
+                  <input type="checkbox" style={{ display: 'none' }} />
+                  <span className="layer-check-box" style={{ display: 'none' }}></span>
+                  <span className="text-[9px] text-gray-500">Overlay opacity</span>
+                  <input type="range" min="0.15" max="0.9" step="0.05" value={layers.overlayOpacity}
+                    onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value }))} className="w-20" />
+                </label>
+                <div className="layer-desc mt-1">Elevation {terrainMeta.elevMin} to {terrainMeta.elevMax} m (viridis ramp) · Slope 0 to {terrainMeta.slopeMaxDeg}&deg; at {terrainMeta.gridM} m grid - steepness display, not a safety rating · Contours every {terrainMeta.contourIntervalM} m</div>
+              </div>
+            </details>
+          )}
+
+          <div className="layer-actions">
+            <button type="button" className="layer-reset" onClick={() => setLayers({
+              geology: true, roverRoute: false, roverStops: false,
+              elevRamp: false, hillshade: false, slope: false, contours: false, crismVna: false, overlayOpacity: 0.55,
+              plannedRoute: true, droppedLegs: true, objectives: true, baseMarker: true, userWps: true,
+            })} title="Reset all layers to their default state">Reset to defaults</button>
+          </div>
         </div>
       </details>
 

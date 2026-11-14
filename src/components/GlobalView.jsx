@@ -40,6 +40,72 @@ function latLonToVec3(lat, lon, r = R) {
   );
 }
 
+// Great-circle (spherical surface) distance between two points, in km.
+// This is the surface distance along the sphere - NOT a straight chord through
+// the planet, and NOT a terrain-aware route. R = 3389.5 km (Mars mean radius).
+const MARS_R_KM = 3389.5;
+export function greatCircleDistanceKm(lat1, lon1, lat2, lon2) {
+  const a = latLonToVec3(lat1, lon1, 1);
+  const b = latLonToVec3(lat2, lon2, 1);
+  const dot = Math.max(-1, Math.min(1, a.dot(b)));
+  return Math.acos(dot) * MARS_R_KM;
+}
+
+// Midpoint (as a world-space Vector3 on the sphere surface) of the great-circle
+// arc between two points, for placing the floating distance label.
+export function greatCircleMidpointVec(lat1, lon1, lat2, lon2) {
+  const a = latLonToVec3(lat1, lon1, 1);
+  const b = latLonToVec3(lat2, lon2, 1);
+  const dot = Math.max(-1, Math.min(1, a.dot(b)));
+  const omega = Math.acos(dot);
+  if (omega < 1e-9) return latLonToVec3(lat1, lon1, R * 1.005);
+  const t = 0.5;
+  const ka = Math.sin((1 - t) * omega) / Math.sin(omega);
+  const kb = Math.sin(t * omega) / Math.sin(omega);
+  return new THREE.Vector3()
+    .addVectors(a.clone().multiplyScalar(ka), b.clone().multiplyScalar(kb))
+    .normalize()
+    .multiplyScalar(R * 1.005);
+}
+
+// Curved great-circle route drawn on the globe surface. Rotates with the globe
+// because it lives in the same world space as the sphere (centre at origin).
+function RouteArc({ fromLat, fromLon, toLat, toLon, color }) {
+  const pointsRef = useRef();
+  const pts = useMemo(() => {
+    const a = latLonToVec3(fromLat, fromLon, 1);
+    const b = latLonToVec3(toLat, toLon, 1);
+    const dot = Math.max(-1, Math.min(1, a.dot(b)));
+    const omega = Math.acos(dot);
+    const samples = 80;
+    const so = Math.sin(omega);
+    const arr = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const ka = Math.sin((1 - t) * omega) / so;
+      const kb = Math.sin(t * omega) / so;
+      const v = new THREE.Vector3()
+        .addVectors(a.clone().multiplyScalar(ka), b.clone().multiplyScalar(kb))
+        .normalize()
+        .multiplyScalar(R * 1.002);
+      arr.push(v.x, v.y, v.z);
+    }
+    return arr;
+  }, [fromLat, fromLon, toLat, toLon]);
+  useEffect(() => {
+    if (!pointsRef.current) return;
+    pointsRef.current.setAttribute('position', new Float32Array(pts));
+    pointsRef.current.setDrawRange(0, pts.length / 3);
+    pointsRef.current.needsUpdate = true;
+  }, [pts]);
+  return (
+    <line>
+      <bufferGeometry ref={pointsRef} />
+      <lineBasicMaterial color={color} transparent opacity={0.85} />
+    </line>
+  );
+}
+
 function MarsSphere({ globeRef }) {
   const texture = useLoader(THREE.TextureLoader, '/data/mars_viking_mdim21_2048.jpg');
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -56,10 +122,19 @@ function MarsSphere({ globeRef }) {
 const ZOOM_TIERS = [[4.5, 600], [3.4, 300], [2.6, 120], [1.9, 50], [0, 15]];
 const MAX_LABELS = 60;
 
+// Label density presets: scale the minimum feature diameter (fewer/larger
+// labels when minimal), the label cap, and the base opacity.
+const DENSITY_PRESETS = {
+  minimal: { scale: 1.7, cap: 0.5, opacity: 0.4 },
+  balanced: { scale: 1.0, cap: 1.0, opacity: 0.75 },
+  detailed: { scale: 0.65, cap: 1.4, opacity: 0.92 },
+};
+
 const _v = new THREE.Vector3();
-function LabelLayout({ features, view, setVisibleKeys, excludeRects }) {
+function LabelLayout({ features, view, density, setVisibleKeys, excludeRects }) {
   const { camera, size } = useThree();
   const last = useRef(0);
+  const densityCfg = DENSITY_PRESETS[density];
   useFrame(() => {
     const now = performance.now();
     if (now - last.current < 120) return; // ~8 Hz relayout
@@ -84,7 +159,7 @@ function LabelLayout({ features, view, setVisibleKeys, excludeRects }) {
     }
     px.sort((a, b) => b.d - a.d);
     const minGap = size.width < 560 ? 44 : 52;
-    const cap = size.width < 560 ? 24 : 40;
+    const cap = Math.max(1, Math.round((size.width < 560 ? 24 : 40) * densityCfg.cap));
     const kept = [];
     for (const c of px) {
       if (kept.length >= cap) break;
@@ -110,7 +185,7 @@ function ZoomTracker({ setView }) {
   return null;
 }
 
-export default function GlobalView({ onOpenRegion }) {
+export default function GlobalView({ onOpenRegion, endpoints, abMetrics, routeModel = 'straight', routeVisible = true, onToggleRoute }) {
   const [catalog, setCatalog] = useState(null);
   const [selected, setSelected] = useState(null);
   const [bannerOpen, setBannerOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 560 : true);
@@ -122,6 +197,9 @@ export default function GlobalView({ onOpenRegion }) {
   const [demError, setDemError] = useState(null);
   const [view, setView] = useState({ dist: 3.0, dir: [0, 0.35, 0.94] });
   const [visibleKeys, setVisibleKeys] = useState({ sig: '', keys: new Set() });
+  const [labelDensity, setLabelDensity] = useState('balanced');
+  const [labelsVisible, setLabelsVisible] = useState(true);
+  const [geoSelected, setGeoSelected] = useState(null);
   const bannerRef = useRef(null);
   const buttonsRef = useRef(null);
   const canvasWrapRef = useRef(null);
@@ -131,7 +209,8 @@ export default function GlobalView({ onOpenRegion }) {
     fetch('/data/mission_sites.json').then(r => r.json()).then(setCatalog).catch(() => setCatalog(null));
     fetch('/data/mars_nomenclature.json').then(r => r.json()).then(d => setNom(d.features)).catch(() => setNom(null));
   }, []);
-  const minDiam = ZOOM_TIERS.find(([d]) => view.dist >= d)[1];
+  const baseMinDiam = ZOOM_TIERS.find(([d]) => view.dist >= d)[1];
+  const minDiam = baseMinDiam * DENSITY_PRESETS[labelDensity].scale;
   const front = f => {
     const p = latLonToVec3(f.la, f.lo, 1);
     return p.x * view.dir[0] + p.y * view.dir[1] + p.z * view.dir[2] > 0.08;
@@ -177,16 +256,138 @@ export default function GlobalView({ onOpenRegion }) {
           </Html>
         ))}
         <ZoomTracker setView={setView} />
-        <LabelLayout features={candidates} view={view} setVisibleKeys={setVisibleKeys} excludeRects={excludeRects} />
-        {labels.map(f => (
-          <Html key={f.n + '|' + f.la} position={f.pos}
-            zIndexRange={[100, 0]} style={{ pointerEvents: 'none' }} center>
-            <div className="nom-label" title={`${f.n} (${f.t}, ${f.d} km) - IAU/USGS Gazetteer`}>{f.n}</div>
+        <LabelLayout features={candidates} view={view} density={labelDensity} setVisibleKeys={setVisibleKeys} excludeRects={excludeRects} />
+        {labelsVisible && labels.map(f => {
+          const active = geoSelected && geoSelected.n === f.n && geoSelected.la === f.la;
+          return (
+            <Html key={f.n + '|' + f.la} position={f.pos}
+              zIndexRange={[100, 0]} style={{ pointerEvents: 'auto' }} center>
+              <div
+                className={`globe-label ${active ? 'globe-label--active' : ''} globe-label--${labelDensity}`}
+                title={`${f.n} (${f.t}, ${f.d} km) - IAU/USGS Gazetteer`}
+                onClick={() => setGeoSelected(f)}
+              >
+                <span className="globe-label-title">{f.n}</span>
+              </div>
+            </Html>
+          );
+        })}
+        {geoSelected && labelsVisible && (
+          <Html position={latLonToVec3(geoSelected.la, geoSelected.lo, R * 1.006)}
+            zIndexRange={[200, 0]} style={{ pointerEvents: 'none' }} center>
+            <div className="geo-highlight" />
           </Html>
-        ))}
+        )}
+
+        {/* Two-point distance visualization: curved great-circle route. */}
+        {endpoints && routeVisible && (
+          <>
+            <RouteArc
+              fromLat={endpoints[0].lat} fromLon={endpoints[0].lon}
+              toLat={endpoints[1].lat} toLon={endpoints[1].lon}
+              color={routeModel === 'traverse' ? '#a3e635' : '#22d3ee'} />
+            {[0, 1].map((i) => {
+              const e = endpoints[i];
+              const isStart = i === 0;
+              return (
+                <Html key={i} position={latLonToVec3(e.lat, e.lon, R * 1.007)}
+                  zIndexRange={[300, 0]} style={{ pointerEvents: 'auto', cursor: 'default' }} center>
+                  <div className={`globe-endpoint ${isStart ? 'globe-endpoint--start' : 'globe-endpoint--dest'}`}
+                    title={`${e.label} (${e.lat.toFixed(3)}°, ${e.lon.toFixed(3)}°)`}>
+                    <div className="globe-endpoint-core" />
+                  </div>
+                  <div className="globe-endpoint-label">{e.label}</div>
+                </Html>
+              );
+            })}
+            {/* Floating distance label at the arc midpoint. */}
+            <Html position={greatCircleMidpointVec(endpoints[0].lat, endpoints[0].lon, endpoints[1].lat, endpoints[1].lon)}
+              zIndexRange={[250, 0]} style={{ pointerEvents: 'none' }} center>
+              <div className="globe-dist-label">
+                <div className="globe-dist-label-inner">
+                  <div className="globe-dist-label-pair">{endpoints[0].label} → {endpoints[1].label}</div>
+                  <div className="globe-dist-label-value">
+                    {greatCircleDistanceKm(endpoints[0].lat, endpoints[0].lon, endpoints[1].lat, endpoints[1].lon).toFixed(2)} km
+                  </div>
+                  <div className="globe-dist-label-model">{routeModel === 'traverse' ? 'recorded traverse' : routeModel === 'leastcost' ? 'least-cost terrain' : 'great-circle surface'} distance</div>
+                </div>
+              </div>
+            </Html>
+          </>
+        )}
         <OrbitControls enablePan={false} minDistance={1.7} maxDistance={6}
           autoRotate={!(typeof location !== 'undefined' && location.hash.includes('globelon'))} autoRotateSpeed={0.5} enableDamping dampingFactor={0.08} />
       </Canvas>
+
+      <div className="globe-controls">
+        <div className="globe-control-row">
+          <label className="text-[10px] text-gray-400">
+            <input type="checkbox" checked={labelsVisible} onChange={e => setLabelsVisible(e.target.checked)} style={{ marginRight: 6 }} />
+            Geographical labels
+          </label>
+          <select value={labelDensity} onChange={e => setLabelDensity(e.target.value)}
+            className="bg-[#0a0e17] border border-cyan-900 rounded px-1.5 py-0.5 text-[10px] text-gray-200">
+            <option value="minimal">Minimal</option>
+            <option value="balanced">Balanced</option>
+            <option value="detailed">Detailed</option>
+          </select>
+          <span className={`globe-density-chip globe-density-chip--active`}>{labelDensity}</span>
+        </div>
+        {endpoints && (
+          <div className="globe-control-row">
+            <button type="button" onClick={onToggleRoute}
+              className={`globe-route-toggle ${routeVisible ? 'globe-route-toggle--active' : ''}`}>
+              {routeVisible ? 'Hide route' : 'Show route'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {endpoints && routeVisible && (
+        <div style={{ position: 'absolute', bottom: 70, left: 10, zIndex: 1000, maxWidth: 260 }}
+          className="bg-[#0d1420]/95 border border-cyan-900 rounded p-2 text-[10px] text-gray-300 globe-distance-panel">
+          <div className="globe-distance-panel-head">
+            <span className="globe-distance-panel-title">Two-point route</span>
+            <span className="text-[9px] text-gray-500">
+              {routeModel === 'traverse' ? 'Recorded traverse' : routeModel === 'leastcost' ? 'Least-cost terrain' : 'Great-circle surface'}
+            </span>
+          </div>
+          <div className="globe-distance-panel-body">
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">From</span>
+              <span className="globe-distance-row-value">{endpoints[0].label}</span>
+            </div>
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">To</span>
+              <span className="globe-distance-row-value">{endpoints[1].label}</span>
+            </div>
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">Distance</span>
+              <span className="globe-distance-row-value"><b>
+                {greatCircleDistanceKm(endpoints[0].lat, endpoints[0].lon, endpoints[1].lat, endpoints[1].lon).toFixed(2)}
+              </b> km</span>
+            </div>
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">Est. travel time</span>
+              <span className="globe-distance-row-value">
+                {Math.round(greatCircleDistanceKm(endpoints[0].lat, endpoints[0].lon, endpoints[1].lat, endpoints[1].lon) / 1.0)} min walk <span className="text-gray-500 text-[9px]">(1.0 km/h declared pace)</span>
+              </span>
+            </div>
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">Elevation gain</span>
+              <span className="globe-distance-row-value globe-distance-row-value--muted">
+                not available at globe scale (coarse grid only)
+              </span>
+            </div>
+            <div className="globe-distance-row">
+              <span className="globe-distance-row-label">Model note</span>
+              <span className="globe-distance-row-value globe-distance-row-value--muted">
+                Globe route is great-circle surface distance on the coarse global grid - not terrain-aware. Fine terrain/route models run in the Jezero and Gale workspaces only.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100% - 16px)' }}>
       <div ref={bannerRef} style={{ maxWidth: bannerOpen ? 300 : 170, overflowY: 'auto', flexShrink: 1, minHeight: 0 }}
@@ -247,6 +448,21 @@ export default function GlobalView({ onOpenRegion }) {
       <div style={{ maxWidth: 330, flexShrink: 0 }}
         className="bg-[#0d1420]/95 border border-gray-700 rounded p-2 text-[10px] text-gray-300">
         <b className="text-gray-200">Coarse global elevation - sampled at ~12.8 km/px (experimental).</b>
+
+      {geoSelected && (
+        <div style={{ position: 'absolute', bottom: 70, left: 10, zIndex: 1000, maxWidth: 260 }}
+          className="bg-[#0d1420]/95 border border-cyan-900 rounded p-2 text-[10px] text-gray-300">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <b className="text-cyan-400">{geoSelected.n}</b>
+            <button type="button" onClick={() => setGeoSelected(null)}
+              className="text-gray-500 hover:text-gray-200">×</button>
+          </div>
+          <div className="text-gray-400 text-[9px] mb-1">{geoSelected.t}</div>
+          <div className="text-gray-400 text-[9px] mb-1">~{geoSelected.d} km across</div>
+          <a href={geoSelected.u} target="_blank" rel="noreferrer" className="text-cyan underline text-[9px] block">USGS Gazetteer entry →</a>
+          <div className="mt-1 text-gray-500 text-[9px]">Tap any place name on the globe to select it.</div>
+        </div>
+      )}
         <div className="text-gray-500 mb-1">Great-circle sampling of the coarse grid - NOT terrain-aware pathfinding, not a route. USGS HRSC/MOLA v2 (MOLA CC0 + HRSC CC BY-SA 3.0 IGO).</div>
         <div className="flex items-center gap-1.5">
           <select aria-label="Profile from" value={demFrom} onChange={e => setDemFrom(e.target.value)}

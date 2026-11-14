@@ -1,5 +1,25 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Vite cache
+.vite/
+
+# Local config
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data raw (large source files)
 data_raw/sim3464_JezeroNili_FINAL/
 data_raw/sim3464_database.zip
 data_raw/orthomosaic_6m.tif
