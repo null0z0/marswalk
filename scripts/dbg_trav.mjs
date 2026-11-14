@@ -1,0 +1,15 @@
+import { buildTraverseGraph, traversePath, snapToTraverse } from '../src/lib/traverse.js';
+import { toM } from '../src/lib/terrain.js';
+import { readFileSync } from 'node:fs';
+const track = JSON.parse(readFileSync('public/data/rover_track_gale.json', 'utf8'));
+const g = buildTraverseGraph(track);
+console.log('nodes', g.nodes.length);
+const A = { lat: -4.589508, lon: 137.441506 }, B = { lat: -4.5955379, lon: 137.4425796 };
+const [ax, ay] = toM(A.lon, A.lat), [bx, by] = toM(B.lon, B.lat);
+console.log('straight m:', Math.hypot(bx - ax, by - ay).toFixed(1));
+const sa = snapToTraverse(g, A.lat, A.lon), sb = snapToTraverse(g, B.lat, B.lon);
+console.log('snapA', sa, 'nodeA', g.nodes[sa.node]);
+console.log('snapB', sb, 'nodeB', g.nodes[sb.node]);
+const r = traversePath(g, A, B);
+console.log('ok', r.ok, 'distM', r.distM, 'pathLen', r.pathLatLon.length);
+console.log('first', r.pathLatLon[0], 'last', r.pathLatLon[r.pathLatLon.length - 1]);

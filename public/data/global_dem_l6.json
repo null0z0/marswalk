@@ -1,0 +1,20 @@
+{
+ "src": "USGS HRSC/MOLA Blended DEM Global 200m v2 (overview level 6 of COG mirror)",
+ "srcUrl": "https://planetarymaps.usgs.gov/mosaic/Mars/HRSC_MOLA_Blend/Mars_HRSC_MOLA_BlendDEM_Global_200mp_v2.tif",
+ "mirror": "https://huggingface.co/datasets/Biscut4Biscuit/mola-hrsc-baseline-cog",
+ "license": "MOLA (CC0) + HRSC (CC BY-SA 3.0 IGO) - attribution + share-alike",
+ "citation": "Fergason, Hare & Laura (2018), HRSC and MOLA Blended DEM 200m v2, USGS Astrogeology PDS Annex",
+ "width": 1667,
+ "height": 833,
+ "bbox": [
+  -180,
+  -89.99922395220543,
+  179.99844790441085,
+  90
+ ],
+ "degPerPx": 0.21595587756713308,
+ "mPerPxEquator": 12804,
+ "dtype": "int16",
+ "datum": "MOLA areoid",
+ "nodata": -32768
+}

@@ -1,12 +1,12 @@
 export default function TimeControl({ windowMin, dwellMin, paceKmh, setWindowMin, setDwellMin, setPaceKmh, onOverrun, onUndoOverrun, onReset, overrunLeft, overrunApplied }) {
   return (
     <div className="p-3 bg-[#101826] rounded border border-cyan-900">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button onClick={overrunApplied ? onUndoOverrun : onOverrun} disabled={!overrunApplied && !overrunLeft}
-          className={`w-[215px] px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap ${overrunApplied ? 'bg-green-700 hover:bg-green-600' : 'bg-amber-600 hover:bg-amber-500'} disabled:bg-gray-700`}>
+          className={`flex-1 min-w-[150px] px-2 py-1.5 rounded text-[11px] font-bold leading-tight ${overrunApplied ? 'bg-green-700 hover:bg-green-600' : 'bg-amber-600 hover:bg-amber-500'} disabled:bg-gray-700`}>
           {overrunApplied ? '+60 applied - undo' : '+60 min overrun at current stop'}
         </button>
-        <button onClick={onReset} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">Reset plan</button>
+        <button onClick={onReset} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-[11px]">Reset plan</button>
       </div>
       <details className="mt-2">
         <summary className="cursor-pointer text-gray-500 text-[10px] select-none">Assumptions (window, dwell, pace)</summary>

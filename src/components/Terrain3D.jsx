@@ -137,11 +137,32 @@ function legPoints(hm, a, b) {
   return pts;
 }
 
-function StationMarker({ hm, s, dropped, visited, lk, ms = 1 }) {
+// Drape an arbitrary lat/lon path (two-point route geometry: recorded-drive
+// polylines, least-cost path, or a straight pair) on the terrain. Each segment
+// is resampled every ~10 m in projected meters and every sample takes its
+// height from the DTM (same convention as legPoints) so the line hugs the
+// relief instead of cutting through it - horizontal positions unchanged.
+function pathPoints(hm, latlons) {
+  const pts = [];
+  for (let i = 0; i < latlons.length - 1; i++) {
+    const [ax, ay] = proj4(EQC, [latlons[i][1], latlons[i][0]]);
+    const [bx, by] = proj4(EQC, [latlons[i + 1][1], latlons[i + 1][0]]);
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 10));
+    for (let k = (i === 0 ? 0 : 1); k <= n; k++) {
+      const mx = ax + (bx - ax) * (k / n), my = ay + (by - ay) * (k / n);
+      const [x, z] = worldXY(hm, mx, my);
+      pts.push([x, terrainY(hm, mx, my) + 1.5, z]);
+    }
+  }
+  return pts;
+}
+
+function StationMarker({ hm, s, dropped, visited, lk, ms = 1, mode = 'planner' }) {
   const color = markerColor(s, dropped, visited);
   const [x, y, z] = stationPos(hm, s);
   // Short map labels only; caveats/disclaimers live in the left panel card.
-  const name = (s.id === 'Depot' || s.id === 'GaleBase') ? 'Base' : (s.short || s.name);
+  // Route mode always shows the real place name - there is no assumed base.
+  const name = (mode !== 'route' && (s.id === 'Depot' || s.id === 'GaleBase')) ? 'Base' : (s.short || s.name);
   const label = name + (dropped ? ' - LOST' : '');
   const base = (lk > 1 && LABEL_OFFSET_MOBILE[s.id]) || LABEL_OFFSET[s.id] || [0, 150, 0];
   const off = base.map(v => v * lk);
@@ -182,11 +203,11 @@ function SepNote({ hm, a, b, lk }) {
   );
 }
 
-function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
+function Scene({ hm, stations, plan, focus, lk, region, minDist = 150, mode = 'planner', abPath = null, abParts = null }) {
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
-  const droppedIds = plan.dropped.map(d => d.id);
-  const visitedIds = plan.visitedLegs.map(l => l.to);
-  const legs = plan.visitedLegs.concat(plan.sim.legs);
+  const droppedIds = mode === 'route' ? [] : plan.dropped.map(d => d.id);
+  const visitedIds = mode === 'route' ? [] : plan.visitedLegs.map(l => l.to);
+  const legs = mode === 'route' ? [] : plan.visitedLegs.concat(plan.sim.legs);
   // Marker size scales with route spread so fixed-size spheres don't
   // swallow a compact cluster (Gale ~150 m across vs Jezero ~700 m).
   let spread = 0;
@@ -211,6 +232,17 @@ function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
           color="#22d3ee" lineWidth={2.5}
           dashed={leg.to === baseId && k > 0} dashSize={18} gapSize={12} />
       ))}
+      {mode === 'route' && abParts
+        // Recorded-traverse mode: keep the 2D map's synthetic-vs-recorded
+        // distinction - recorded runs solid green, synthetic connectors dashed,
+        // each draped on the DTM at ~10 m sampling.
+        ? abParts.map((part, i) => (
+            <Line key={'ab3p' + i} points={pathPoints(hm, part.latlons)} color="#a3e635"
+              lineWidth={2.5} dashed={part.synthetic} dashSize={10} gapSize={7} />
+          ))
+        : mode === 'route' && abPath && abPath.length > 1 && (
+            <Line points={pathPoints(hm, abPath)} color="#22d3ee" lineWidth={2.5} />
+          )}
       {droppedIds.map(id => (
         <Line key={'drop' + id} points={legPoints(hm, lastVisited, byId[id])}
           color="#cc3333" lineWidth={2.5} dashed dashSize={35} gapSize={22} />
@@ -218,9 +250,9 @@ function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
       {stations.filter(s => s.lat != null).map(s => {
         const dropped = droppedIds.includes(s.id);
         const visited = visitedIds.includes(s.id);
-        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} ms={ms} />;
+        return <StationMarker key={s.id} hm={hm} s={s} dropped={dropped} visited={visited} lk={lk} ms={ms} mode={mode} />;
       })}
-      {byId.Wildcat && byId.Skinner && <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />}
+      {mode !== 'route' && byId.Wildcat && byId.Skinner && <SepNote hm={hm} a={byId.Wildcat} b={byId.Skinner} lk={lk} />}
       <OrbitControls makeDefault target={focus}
         maxPolarAngle={1.45} minDistance={minDist} maxDistance={12000}
         enableDamping dampingFactor={0.08} />
@@ -228,7 +260,7 @@ function Scene({ hm, stations, plan, focus, lk, region, minDist = 150 }) {
   );
 }
 
-export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot' }) {
+export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 'Depot', mode = 'planner', abPath = null, abParts = null }) {
   const [hm, setHm] = useState(null);
   useEffect(() => {
     setHm(null);
@@ -273,7 +305,7 @@ export default function Terrain3D({ stations, plan, region = 'jezero', baseId = 
     <div className="relative h-full w-full">
       <Canvas camera={{ position: camPos, fov: 45, near: 10, far: 40000 }}
         style={{ background: '#0a0e17' }} dpr={[1, 1.5]}>
-        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} region={region} minDist={minDist} />
+        <Scene hm={hm} stations={stations} plan={plan} focus={focus} lk={k} region={region} minDist={minDist} mode={mode} abPath={abPath} abParts={abParts} />
       </Canvas>
       <div className="absolute bottom-1 left-1 z-[1000] pointer-events-none bg-[#0d1420cc] border border-cyan-900 rounded px-2 py-1 text-[9px] leading-tight text-gray-300 max-w-[260px]">
         {region === 'gale'

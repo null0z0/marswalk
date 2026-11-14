@@ -16,10 +16,18 @@ export default function MissionDecision({
   if (!infeasible && dropped.length === 0) return null;
 
   const lostNames = dropped.map((d) => d.name).join(', ');
-  const savedMin = Math.max(0, Math.round(plan.full.total - plan.sim.total));
-  const kept = plan.visitedLegs.length + plan.kept.length;
+  // plan.full re-simulates ALL requested stops: if any excluded stop has no
+  // computable route it is Infinity, and "savings" against it would be too.
+  const fullFinite = isFinite(plan.full.total);
+  const savedMin = fullFinite ? Math.max(0, Math.round(plan.full.total - plan.sim.total)) : null;
+  // Objectives = science stops only. Via waypoints are navigation points:
+  // never counted here, matching MissionStatusBar and PlanSummary.
+  const via = new Set(plan.viaIds || []);
+  const kept = plan.visitedLegs.filter((l) => !via.has(l.to)).length
+    + (plan.scienceKept ?? plan.kept.filter((s) => !s.via).length);
   const objectives = kept + dropped.length;
   const total = plan.elapsed + plan.sim.total;
+  const costable = isFinite(plan.sim.total);
 
   return (
     <section
@@ -40,9 +48,19 @@ export default function MissionDecision({
               <em>no station silently dropped</em>
             </h2>
             <p className="decision-reason">
-              The must-have objectives exceed the remaining window by{' '}
-              <strong>{Math.round(plan.shortfall)} min</strong>. Increase the window or change
-              the assumptions — the planner will not trade away protected science.
+              {costable ? (
+                <>
+                  The must-have objectives exceed the remaining window by{' '}
+                  <strong>{Math.round(plan.shortfall)} min</strong>. Increase the window or change
+                  the assumptions — the planner will not trade away protected science.
+                </>
+              ) : (
+                <>
+                  A must-have stop has <strong>no computable route</strong> (outside the elevation
+                  coverage or across missing data), so no honest time cost exists. Move or unprotect
+                  it — the planner will not shorten or invent the route.
+                </>
+              )}
             </p>
           </>
         ) : (
@@ -53,7 +71,7 @@ export default function MissionDecision({
               <em>lowest-priority non-must-have</em>
             </h2>
             <p className="decision-reason">
-              Dropping this objective brings the remaining traverse back inside the{' '}
+              {dropped.length > 1 ? 'Dropping these objectives brings' : 'Dropping this objective brings'} the remaining traverse back inside the{' '}
               {Math.round(windowMin)} min window. Completed work is frozen; the rest of the
               route is re-ordered around what can still be reached.
             </p>
@@ -70,7 +88,7 @@ export default function MissionDecision({
           <>
             <div className="decision-metric">
               <span className="eyebrow">Shortfall</span>
-              <b>{Math.round(plan.shortfall)} min</b>
+              <b>{costable ? `${Math.round(plan.shortfall)} min` : 'no route'}</b>
             </div>
             <div className="decision-metric">
               <span className="eyebrow">Window</span>
@@ -78,22 +96,22 @@ export default function MissionDecision({
             </div>
             <div className="decision-metric">
               <span className="eyebrow">Plan</span>
-              <b>{Math.round(total)} min</b>
+              <b>{costable ? `${Math.round(total)} min` : '—'}</b>
             </div>
           </>
         ) : (
           <>
             <div className="decision-metric">
               <span className="eyebrow">Time recovered</span>
-              <b>{savedMin} min</b>
+              <b>{savedMin == null ? '—' : `${savedMin} min`}</b>
             </div>
             <div className="decision-metric">
               <span className="eyebrow">Distance cut</span>
-              <b>{Math.round(plan.savedDist)} m</b>
+              <b>{isFinite(plan.savedDist) ? `${Math.round(plan.savedDist)} m` : '—'}</b>
             </div>
             <div className="decision-metric">
               <span className="eyebrow">Ascent avoided</span>
-              <b>{Math.round(plan.savedAsc)} m</b>
+              <b>{isFinite(plan.savedAsc) ? `${Math.round(plan.savedAsc)} m` : '—'}</b>
             </div>
             <div className="decision-metric">
               <span className="eyebrow">Kept</span>

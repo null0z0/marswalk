@@ -1,0 +1,26 @@
+import path from 'node:path'; import http from 'node:http'; import fs from 'node:fs';
+import { chromium } from 'playwright';
+const dist = '/home/sandbox/marswalk/dist';
+const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.jpg':'image/jpeg','.png':'image/png','.geojson':'application/json' };
+const server = http.createServer((req,res)=>{ const rel = req.url==='/'?'index.html':decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/,'');
+  fs.readFile(path.join(dist,rel),(e,buf)=>{ if(e){res.writeHead(404);res.end();return;} res.writeHead(200,{'content-type':MIME[path.extname(rel).toLowerCase()]||'application/octet-stream'}); res.end(buf); }); });
+await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const b = await chromium.launch({ executablePath:'/usr/bin/google-chrome', args:['--no-sandbox'] });
+const p = await (await b.newContext({ viewport:{width:1440,height:900} })).newPage();
+const bad = [];
+p.on('response', r => { if (r.status() >= 400) bad.push(r.status() + ' ' + r.url()); });
+p.on('pageerror', e => bad.push('PAGEERROR ' + String(e).slice(0,200)));
+p.on('console', m => { if (m.type() === 'error') bad.push('CONSOLE ' + m.text().slice(0,200)); });
+await p.goto(`http://127.0.0.1:${server.address().port}`, { waitUntil:'networkidle' });
+await p.waitForSelector('.leaflet-container', { timeout: 20000 });
+await p.locator('section.panel', { hasText: 'Region & mission' }).locator('select').selectOption('gale');
+await p.waitForTimeout(6000);
+const info = await p.evaluate(() => {
+  const imgs = [...document.querySelectorAll('.leaflet-overlay-pane img, .leaflet-image-layer')].map(i => ({ src: (i.src||'').split('/').slice(-2).join('/'), w: i.width, h: i.height, complete: i.complete, nw: i.naturalWidth }));
+  const layers = [...document.querySelectorAll('.leaflet-control-layers label, label')].filter(e => /ortho|imagery|base/i.test(e.innerText||'')).map(e => e.innerText.slice(0,80));
+  return { imgs: imgs.slice(0,6), layers: layers.slice(0,6), tiles: document.querySelectorAll('.leaflet-tile').length };
+});
+console.log(JSON.stringify(info, null, 1));
+console.log('bad:', bad.slice(0,10).join('\n') || 'none');
+await p.screenshot({ path: '/tmp/gale_dbg.png' });
+await b.close(); server.close();

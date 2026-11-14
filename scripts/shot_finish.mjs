@@ -3,7 +3,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const dist = '/tmp/marswalk/dist';
+const dist = '/home/sandbox/marswalk/dist';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.jpg': 'image/jpeg', '.png': 'image/png', '.geojson': 'application/json' };
 const server = http.createServer((req, res) => {
   const rel = req.url === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
