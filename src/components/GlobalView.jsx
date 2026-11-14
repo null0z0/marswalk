@@ -319,17 +319,21 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         {markers.filter(s => s.pos.x * view.dir[0] + s.pos.y * view.dir[1] + s.pos.z * view.dir[2] > 0.02).map(s => (
           <Html key={s.id} position={s.pos} zIndexRange={[900, 0]}
             style={{ pointerEvents: 'auto' }}>
-            <button type="button" aria-label={s.name} onClick={() => { setSelectedEv(null); setSelectedEvId(null); setEvDetailOpen(false); setSelected(s); }}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
-              dangerouslySetInnerHTML={{ __html: shapeSvg(s.st.shape, s.st.color) }} />
+            <div className="globe-marker-touch">
+              <button type="button" aria-label={s.name} onClick={() => { setSelectedEv(null); setSelectedEvId(null); setEvDetailOpen(false); setSelected(s); }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
+                dangerouslySetInnerHTML={{ __html: shapeSvg(s.st.shape, s.st.color) }} />
+            </div>
           </Html>
         ))}
         {showEvents && evMarkers.filter(s => s.pos.x * view.dir[0] + s.pos.y * view.dir[1] + s.pos.z * view.dir[2] > 0.02).map(s => (
           <Html key={s.id} position={s.pos} zIndexRange={[950, 0]}
             style={{ pointerEvents: 'auto' }}>
-            <button type="button" aria-label={`recorded natural events: ${s.events.length}`} onClick={() => { setSelectedEv(s); setSelectedEvId(null); setEvDetailOpen(false); setSelected(null); }}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
-              dangerouslySetInnerHTML={{ __html: evSvg(s.kind) }} />
+            <div className="globe-marker-touch">
+              <button type="button" aria-label={`recorded natural events: ${s.events.length}`} onClick={() => { setSelectedEv(s); setSelectedEvId(null); setEvDetailOpen(false); setSelected(null); }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
+                dangerouslySetInnerHTML={{ __html: evSvg(s.kind) }} />
+            </div>
           </Html>
         ))}
         {arc && (
@@ -365,7 +369,11 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
           </Html>
         ))}
         <OrbitControls enablePan={false} minDistance={1.7} maxDistance={6}
-          autoRotate={spin} autoRotateSpeed={0.5} enableDamping dampingFactor={0.08} />
+          autoRotate={spin} autoRotateSpeed={0.5} enableDamping dampingFactor={0.08}
+          onPointerDown={() => setSpin(false)}
+          onPointerUp={() => {
+            if (typeof window !== 'undefined' && window.innerWidth > 767) setSpin(true);
+          }} />
       </Canvas>
 
       <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100% - 16px)' }}>
