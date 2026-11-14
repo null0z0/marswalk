@@ -558,20 +558,6 @@ export default function App() {
             visitedLegs={plan.visitedLegs}
             onRemoveWaypoint={removeWaypoint}
             onClose={() => setDrawerOpen(false)} />
-
-          <section className="panel text-xs space-y-2">
-            <div className="eyebrow">Your waypoints</div>
-            <div className="text-xs text-slate-300">Coordinates only — no science objective is attached. Navigation points are always kept on route.</div>
-            <button
-              type="button"
-              onClick={toggleAddMode}
-              className={`btn btn-sm w-full font-bold ${addMode ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              {addMode ? 'Cancel waypoint placement (active)' : '+ Add waypoint on map'}
-            </button>
-            <CoordinateEntry onAdd={addWaypoint} />
-            {waypointError && <div className="text-xs text-amber-400 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">{waypointError}</div>}
-          </section>
         </aside>
 
         <main className="map-stage" aria-label="Mission map">
