@@ -15,6 +15,7 @@ import GlobalView from './components/GlobalView.jsx';
 import RouteCompare from './components/RouteCompare.jsx';
 import PointInspector from './components/PointInspector.jsx';
 import DemoCoach from './components/DemoCoach.jsx';
+import RadiationCard from './components/RadiationCard.jsx';
 import { MapIcon, TerrainIcon, ResetIcon, OrbitSmallIcon } from './components/Icons.jsx';
 import { buildPlan, legMetrics } from './lib/planner.js';
 import { buildTraverseGraph, traversePath, SNAP_TOLERANCE_M } from './lib/traverse.js';
@@ -450,6 +451,7 @@ export default function App() {
                 Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
               </div>
             </details>
+            <RadiationCard region={region} />
           </section>
 
           <SolTimeline stations={scenarioStations} region={region} roverTrack={roverTrack} solLimit={solLimit} setSolLimit={setSolLimit} />
