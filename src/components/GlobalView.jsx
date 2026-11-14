@@ -218,8 +218,10 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
   const bannerRef = useRef(null);
   const buttonsRef = useRef(null);
   const canvasWrapRef = useRef(null);
+  const popupRef = useRef(null);
   const excludeRects = useRef([]);
   const globeRef = useRef();
+  const [narrow, setNarrow] = useState(typeof window !== 'undefined' && window.innerWidth < 700);
   useEffect(() => {
     fetch('/data/mission_sites.json').then(r => r.json()).then(setCatalog).catch(() => setCatalog(null));
     fetch('/data/event_markers.json').then(r => r.json()).then(setEvCatalog).catch(() => setEvCatalog(null));
@@ -278,6 +280,33 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
     return () => clearInterval(id);
   }, []);
 
+  // Track narrow screens for bottom-sheet popup layout
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth < 700);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Close all popups on Escape or clicking empty globe space (not on the popup itself).
+  // Marker <Html> buttons live in drei portals outside this div, so clicking a marker
+  // does not trigger this handler; it opens/replaces the popup via its own onClick.
+  useEffect(() => {
+    const closeAll = () => { setSelected(null); setSelectedEv(null); setSelectedEvId(null); setEvDetailOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') closeAll(); };
+    const onClick = (e) => {
+      if (canvasWrapRef.current && canvasWrapRef.current.contains(e.target) && !popupRef.current?.contains(e.target)) {
+        closeAll();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    const wrap = canvasWrapRef.current;
+    if (wrap) wrap.addEventListener('click', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (wrap) wrap.removeEventListener('click', onClick);
+    };
+  }, []);
+
   return (
     <div className="global-view" style={{ position: 'absolute', inset: 0 }} ref={canvasWrapRef}>
       <Canvas camera={{ position: homePos, fov: 42 }} style={{ background: '#05070c' }}>
@@ -289,7 +318,7 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         {markers.filter(s => s.pos.x * view.dir[0] + s.pos.y * view.dir[1] + s.pos.z * view.dir[2] > 0.02).map(s => (
           <Html key={s.id} position={s.pos} zIndexRange={[900, 0]}
             style={{ pointerEvents: 'auto' }}>
-            <button type="button" aria-label={s.name} onClick={() => setSelected(s)}
+            <button type="button" aria-label={s.name} onClick={() => { setSelectedEv(null); setSelectedEvId(null); setEvDetailOpen(false); setSelected(s); }}
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
               dangerouslySetInnerHTML={{ __html: shapeSvg(s.st.shape, s.st.color) }} />
           </Html>
@@ -392,22 +421,77 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
       </div>
 
 
-      {selected && (
-        <div style={{ position: 'absolute', top: 128, right: 8, zIndex: 1000, maxWidth: 320 }}
+      {/* Shared popup container — top-right, one popup at a time. Site and event
+          popups render here so they never overlap the left panel or each other. */}
+      {selected || selectedEv ? (
+        <div ref={popupRef}
+          style={narrow
+            ? { position: 'absolute', bottom: 100, left: 0, right: 0, maxHeight: '45vh', overflowY: 'auto', zIndex: 1100 }
+            : { position: 'absolute', top: 16, right: 16, width: 'min(340px, calc(100vw - 32px))', maxHeight: '60vh', overflowY: 'auto', zIndex: 1100 }}
           className="bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
-          <div className="flex items-start justify-between gap-2">
-            <b className="text-slate-100">{selected.name}</b>
-            <button type="button" aria-label="Close site info" onClick={() => setSelected(null)}
-              className="text-slate-400 hover:text-white">✕</button>
-          </div>
-          <div>{selected.mission} ({selected.agency}){selected.landing_date_utc ? ` - ${selected.landing_date_utc}` : ''}</div>
-          <div className="italic text-slate-300">{selected.st.label}{selected.region ? ` - ${selected.region}` : ''}</div>
-          <div className="mt-1 text-slate-400">
-            Context position for orientation — not a routing target.
-          </div>
-          {selected.source_quote && <div className="mt-1 text-slate-400">Source: {selected.source_quote.slice(0, 220)}</div>}
+          {selected && (
+            <>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <b className="text-slate-100">{selected.name}</b>
+                <button type="button" aria-label="Close site info" onClick={() => setSelected(null)}
+                  className="flex h-8 w-8 items-center justify-center text-slate-400 hover:text-white rounded">✕</button>
+              </div>
+              <div>{selected.mission} ({selected.agency}){selected.landing_date_utc ? ` - ${selected.landing_date_utc}` : ''}</div>
+              <div className="italic text-slate-300">{selected.st.label}{selected.region ? ` - ${selected.region}` : ''}</div>
+              <div className="mt-1 text-slate-400">
+                Context position for orientation — not a routing target.
+              </div>
+              {selected.source_quote && <div className="mt-1 text-slate-400">Source: {selected.source_quote.slice(0, 220)}</div>}
+            </>
+          )}
+          {selectedEv && (() => {
+            const e = selectedEv.events.find(x => x.id === selectedEvId) || selectedEv.events[0];
+            if (!e) return null;
+            const others = selectedEv.events.filter(x => x.id !== e.id);
+            return (
+              <>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <b className="text-amber-300">{TYPE_LABEL[e.type] || e.type}</b>
+                  <button type="button" aria-label="Close event info" onClick={() => { setSelectedEv(null); setSelectedEvId(null); setEvDetailOpen(false); }}
+                    className="flex h-8 w-8 items-center justify-center text-slate-400 hover:text-white rounded">✕</button>
+                </div>
+                <div className="text-slate-100">{e.sol != null ? `Sol ${e.sol} (${e.sol_mission || 'rover sol'}) · ` : ''}{e.date_utc} - {e.location}</div>
+                <div className="mt-0.5 text-amber-200/90">{selectedEv.anchorNote}</div>
+                <button type="button" onClick={() => setEvDetailOpen(o => !o)}
+                  className="mt-1 text-cyan-400 hover:text-cyan-300 underline">
+                  {evDetailOpen ? 'Hide details' : 'Details + source'}
+                </button>
+                {evDetailOpen && (
+                  <div className="mt-1 pt-1 border-t border-slate-800 text-xs">
+                    {e.summary && <div>{e.summary}</div>}
+                    {e.estimated_fields && e.estimated_fields.length > 0 && (
+                      <div className="mt-0.5 text-amber-200/80">Estimated/inferred (not measured): {e.estimated_fields.join('; ')}</div>
+                    )}
+                    {e.source_url && (
+                      <div className="mt-0.5">Source: <a href={e.source_url} target="_blank" rel="noreferrer"
+                        className="text-cyan-400 underline">{e.credit || e.source_url}</a></div>
+                    )}
+                    <div className="mt-1 text-slate-400">
+                      Historical record — not current conditions.
+                    </div>
+                  </div>
+                )}
+                {others.length > 0 && (
+                  <div className="mt-1 pt-1 border-t border-slate-800 text-slate-400 text-xs">
+                    Also recorded here:
+                    {others.map(o => (
+                      <button key={o.id} type="button" onClick={() => { setSelectedEvId(o.id); setEvDetailOpen(false); }}
+                        className="block w-full text-left text-slate-300 hover:text-amber-200 py-0.5 text-xs">
+                        {TYPE_LABEL[o.type] || o.type} — {e.sol != null ? `Sol ${o.sol} · ` : ''}{o.date_utc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
-      )}
+      ) : null}
 
       <div style={{ maxWidth: 340, flexShrink: 0 }}
         className="bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
@@ -495,53 +579,6 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         ))}
       </div>
       </div>
-      {selectedEv && (() => {
-        const e = selectedEv.events.find(x => x.id === selectedEvId) || selectedEv.events[0];
-        if (!e) return null;
-        const others = selectedEv.events.filter(x => x.id !== e.id);
-        return (
-          <div style={{ position: 'absolute', top: 180, right: 8, zIndex: 1000, maxWidth: 320, maxHeight: '62vh', overflowY: 'auto' }}
-            className="bg-[#070d18]/95 border border-amber-600/40 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
-            <div className="flex items-start justify-between gap-2">
-              <b className="text-amber-300">{TYPE_LABEL[e.type] || e.type}</b>
-              <button type="button" aria-label="Close event info" onClick={() => setSelectedEv(null)}
-                className="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div className="text-slate-100">{e.sol != null ? `Sol ${e.sol} (${e.sol_mission || 'rover sol'}) · ` : ''}{e.date_utc} - {e.location}</div>
-            <div className="mt-0.5 text-amber-200/90">{selectedEv.anchorNote}</div>
-            <button type="button" onClick={() => setEvDetailOpen(o => !o)}
-              className="mt-1 text-cyan-400 hover:text-cyan-300 underline">
-              {evDetailOpen ? 'Hide details' : 'Details + source'}
-            </button>
-            {evDetailOpen && (
-              <div className="mt-1 pt-1 border-t border-slate-800 text-xs">
-                {e.summary && <div>{e.summary}</div>}
-                {e.estimated_fields && e.estimated_fields.length > 0 && (
-                  <div className="mt-0.5 text-amber-200/80">Estimated/inferred (not measured): {e.estimated_fields.join('; ')}</div>
-                )}
-                {e.source_url && (
-                  <div className="mt-0.5">Source: <a href={e.source_url} target="_blank" rel="noreferrer"
-                    className="text-cyan-400 underline">{e.credit || e.source_url}</a></div>
-                )}
-                <div className="mt-1 text-slate-400">
-                  Historical record — not current conditions.
-                </div>
-              </div>
-            )}
-            {others.length > 0 && (
-              <div className="mt-1 pt-1 border-t border-slate-800 text-slate-400 text-xs">
-                Also recorded here:
-                {others.map(o => (
-                  <button key={o.id} type="button" onClick={() => { setSelectedEvId(o.id); setEvDetailOpen(false); }}
-                    className="block w-full text-left text-slate-300 hover:text-amber-200 py-0.5 text-xs">
-                    {TYPE_LABEL[o.type] || o.type} — {e.sol != null ? `Sol ${o.sol} · ` : ''}{o.date_utc}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       <div ref={buttonsRef} style={{ position: 'absolute', right: 10, bottom: 52, zIndex: 1000 }} className="global-actions flex flex-col gap-1.5">
         <button type="button" onClick={() => onOpenRegion && onOpenRegion('jezero')}
