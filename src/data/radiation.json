@@ -1,0 +1,14 @@
+{
+  "region": "Gale Crater",
+  "appliesTo": "Gale Crater only. Not measured or modelled for Jezero.",
+  "instrument": "RAD (Radiation Assessment Detector), Curiosity rover",
+  "period": "7 August 2012 to 1 June 2013 (~300 sols), near solar maximum",
+  "scope": "Galactic cosmic rays (GCR) only; solar energetic particle events are not included in these values",
+  "doseEquivalentRate": { "value": 0.64, "uncertainty": 0.12, "unit": "mSv/day" },
+  "absorbedDoseRate": { "value": 0.21, "uncertainty": 0.04, "unit": "mGy/day" },
+  "missionDoseEquivalent500Days": { "value": 320, "uncertainty": 50, "unit": "mSv" },
+  "source": {
+    "citation": "Hassler et al., Science 343, 1244797 (2014)",
+    "table": "Table 1 (surface column), PDF page 3"
+  }
+} 
