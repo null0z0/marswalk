@@ -28,12 +28,14 @@ const srcDomain = (url) => {
 
 function EventCard({ ev }) {
   return (
-    <details className="disclosure">
-      <summary className="text-xs text-slate-200">
-        <span className="text-cyan-400">{TYPE_LABEL[ev.type] || ev.type}</span>
-        {' — '}{fmtDate(ev.date_utc)}{ev.sol != null ? ` (sol ${ev.sol}, ${ev.sol_mission})` : ` (${ev.sol_mission})`}
+    <details className="disclosure event-disclosure">
+      <summary className="text-xs text-slate-200 cursor-pointer min-h-[44px] flex items-center justify-between gap-2 px-3 py-2">
+        <span className="font-semibold text-cyan-400">{TYPE_LABEL[ev.type] || ev.type}</span>
+        <span className="text-slate-400 text-xs font-mono shrink-0">
+          {fmtDate(ev.date_utc)}{ev.sol != null ? ` (sol ${ev.sol})` : ''}
+        </span>
       </summary>
-      <div className="disclosure-body text-xs text-slate-300 space-y-1.5 leading-normal">
+      <div className="disclosure-body text-xs text-slate-300 p-3 space-y-1.5 leading-normal border-t border-cyan-900/30">
         {ev.date_note && <div className="text-slate-400">{ev.date_note}</div>}
         <div>{ev.summary}</div>
         <div className="text-slate-400">Where: {ev.location}</div>
@@ -62,11 +64,12 @@ function MedaCard({ sol }) {
   const pMax = Math.max(...Object.values(d.ps).map(s => s.maxPa));
   const c = (k) => (k - 273.15).toFixed(1);
   return (
-    <details className="disclosure">
-      <summary className="text-xs text-slate-200">
-        <span className="text-cyan-400">Recorded weather (MEDA)</span>{' — '}sol {sol}, Mars 2020
+    <details className="disclosure event-disclosure">
+      <summary className="text-xs text-slate-200 cursor-pointer min-h-[44px] flex items-center justify-between gap-2 px-3 py-2">
+        <span className="font-semibold text-cyan-400">Recorded weather (MEDA)</span>
+        <span className="text-slate-400 text-xs font-mono shrink-0">Sol {sol}, Mars 2020</span>
       </summary>
-      <div className="disclosure-body text-xs text-slate-300 space-y-1.5 leading-normal">
+      <div className="disclosure-body text-xs text-slate-300 p-3 space-y-1.5 leading-normal border-t border-cyan-900/30">
         <div>Air temperature {c(tMin)} to {c(tMax)} &deg;C across 5 ATS sensors; surface pressure {pMin.toFixed(1)}–{pMax.toFixed(1)} Pa across BAROCAP1-3.</div>
         <div className="text-slate-400">Where: at the rover (Perseverance) on that sol — a point record at that place and time.</div>
         <div className="text-slate-400">How we know: MEDA PDS calibrated products, {d.atsRows.toLocaleString()} temperature + {d.psRows.toLocaleString()} pressure rows parsed.</div>

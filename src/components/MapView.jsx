@@ -1,7 +1,9 @@
 import { MapContainer, ImageOverlay, GeoJSON, Polyline, Tooltip, Marker, CircleMarker, Rectangle, ZoomControl, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import eventsData from '../data/historicalEvents.json';
 import medaData from '../data/meda.json';
+import BottomSheet from './BottomSheet.jsx';
+import { LayersIcon, InfoIcon, ResetIcon } from './Icons.jsx';
 
 const EV_TYPE_LABEL = {
   dust_storm_regional: 'Regional dust storm',
@@ -121,7 +123,7 @@ const OVERLAY_LAYERS = (region) => {
   return base;
 };
 
-export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, inspectMode = false, inspectPt = null, onInspect = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, abCompareGeom = null, showPlan = true, resetKey = 0 }) {
+export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, inspectMode = false, inspectPt = null, onInspect = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, abCompareGeom = null, showPlan = true, resetKey = 0, onResetView = null, onResetPlan = null }) {
   const ortho = ORTHO[region] || ORTHO.jezero;
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
@@ -136,13 +138,17 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
   const base = stations.find(s => s.id === baseId) || stations[0];
   const lastVisited = visitedIds.length ? byId[visitedIds[visitedIds.length - 1]] : base;
   const toggle = (k) => setLayers(prev => ({ ...prev, [k]: !prev[k] }));
+  const [activeSheet, setActiveSheet] = useState(null);
+  const [resetPopoverOpen, setResetPopoverOpen] = useState(false);
+  const [layersSheetOpen, setLayersSheetOpen] = useState(false);
+  const [legendSheetOpen, setLegendSheetOpen] = useState(false);
 
   return (
     <div className="relative h-full w-full">
       <MapContainer crs={crs} center={[(ortho.bounds[0][0] + ortho.bounds[1][0]) / 2, (ortho.bounds[0][1] + ortho.bounds[1][1]) / 2]} zoom={5} maxZoom={9} doubleClickZoom={false} zoomControl={false}
         style={{ height: '100%', width: '100%', background: '#0a0e17', cursor: (addMode || inspectMode) ? 'crosshair' : '' }}>
-        {/* zoom at top-right: the default top-left corner is under the Layers panel */}
-        <ZoomControl position="bottomleft" />
+        {/* zoom controls bottom-right with 44px tap targets */}
+        <ZoomControl position="bottomright" />
         <MapClickHandler addMode={addMode} onMapClick={onMapClick} inspectMode={inspectMode} onInspect={onInspect} />
         <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} resetKey={resetKey} />
         <ScaleControl />
@@ -341,8 +347,8 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
         );
       })()}
 
-      {/* Layers panel — floating glass HUD */}
-      <details className="absolute top-3 left-3 z-[1000] bg-[#070d18]/92 border border-cyan-500/25 rounded-xl p-3 text-xs text-slate-200 max-w-[270px] shadow-2xl backdrop-blur-md max-h-[calc(100vh-140px)] overflow-y-auto">
+      {/* Layers panel — floating glass HUD (single border; no doubled focus box) */}
+      <details className="layers-hud absolute top-3 left-3 z-[1000] bg-[#070d18]/92 border border-cyan-900/30 rounded-xl p-3 text-xs text-slate-200 max-w-[270px] shadow-2xl backdrop-blur-md max-h-[calc(100vh-140px)] overflow-y-auto">
         <summary className="cursor-pointer font-bold text-cyan-400 select-none flex items-center justify-between gap-2 tracking-wide uppercase">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse"></span>
@@ -602,6 +608,155 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           </div>
         </div>
       </details>
+
+      {/* ---------- Mobile FAB controls ---------- */}
+      <button type="button" className="layers-fab" aria-label="Map layers" onClick={() => setLayersSheetOpen(true)}>
+        <LayersIcon size={20} />
+      </button>
+      <button type="button" className="reset-fab" aria-label="Reset menu" onClick={() => setResetPopoverOpen(!resetPopoverOpen)}>
+        <ResetIcon size={20} />
+      </button>
+      <button type="button" className="info-fab" aria-label="Legend & data" onClick={() => setLegendSheetOpen(true)}>
+        <InfoIcon size={20} />
+      </button>
+
+      {/* Reset popover (mobile) */}
+      {resetPopoverOpen && (
+        <div className="absolute top-70 left-12 z-[1150] w-[200px] bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 shadow-2xl backdrop-blur-md">
+          <div className="text-xs font-bold text-cyan-400 mb-2">Reset</div>
+          <button type="button" onClick={() => { setResetPopoverOpen(false); onResetView && onResetView(); }}
+            className="w-full text-left text-xs text-slate-200 py-2 px-3 bg-[#0a0e17]/60 border border-cyan-900/30 rounded mb-1 hover:bg-cyan-900/30">Reset view (camera only)</button>
+          <button type="button" onClick={() => { setResetPopoverOpen(false); onResetPlan && onResetPlan(); }}
+            className="w-full text-left text-xs text-amber-300 py-2 px-3 bg-[#0a0e17]/60 border border-cyan-900/30 rounded hover:bg-amber-900/30">Reset plan (waypoints, route, layers)</button>
+        </div>
+      )}
+
+      {/* Layers bottom sheet (mobile) */}
+      <BottomSheet open={layersSheetOpen} onClose={() => setLayersSheetOpen(false)} title="Map layers">
+        <div className="space-y-3">
+          <div className="eyebrow text-cyan-400/90 text-xs">Your plan</div>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Planned route</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Deferred legs</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Base marker</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Your waypoints</span>
+          </label>
+
+          <div className="eyebrow text-cyan-400/90 text-xs pt-2 border-t border-cyan-900/40">Places & rover</div>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Science objectives</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Recorded drive path</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Recorded stops</span>
+          </label>
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={layers.events} onChange={() => toggle('events')} />
+            <span className="switch-track shrink-0"></span>
+            <span className="text-slate-200 text-sm flex-1">Event records</span>
+          </label>
+
+          <div className="eyebrow text-cyan-400/90 text-xs pt-2 border-t border-cyan-900/40">Geology</div>
+          {region === 'jezero' && (
+            <label className="switch flex items-center gap-2 cursor-pointer py-1">
+              <input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} />
+              <span className="switch-track shrink-0"></span>
+              <span className="text-slate-200 text-sm flex-1">USGS geology units</span>
+            </label>
+          )}
+          {region === 'gale' && (
+            <label className="switch flex items-center gap-2 cursor-pointer py-1">
+              <input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} />
+              <span className="switch-track shrink-0"></span>
+              <span className="text-slate-200 text-sm flex-1">CRISM 770 nm brightness</span>
+            </label>
+          )}
+          {terrainMeta && (
+            <>
+              <label className="switch flex items-center gap-2 cursor-pointer py-1">
+                <input type="checkbox" checked={layers.elevRamp} onChange={() => toggle('elevRamp')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="text-slate-200 text-sm flex-1">Elevation ramp</span>
+              </label>
+              <label className="switch flex items-center gap-2 cursor-pointer py-1">
+                <input type="checkbox" checked={layers.hillshade} onChange={() => toggle('hillshade')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="text-slate-200 text-sm flex-1">Hillshade</span>
+              </label>
+              <label className="switch flex items-center gap-2 cursor-pointer py-1">
+                <input type="checkbox" checked={layers.slope} onChange={() => toggle('slope')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="text-slate-200 text-sm flex-1">Slope</span>
+              </label>
+              <label className="switch flex items-center gap-2 cursor-pointer py-1">
+                <input type="checkbox" checked={layers.contours} onChange={() => toggle('contours')} />
+                <span className="switch-track shrink-0"></span>
+                <span className="text-slate-200 text-sm flex-1">Contours</span>
+              </label>
+            </>
+          )}
+          <label className="switch flex items-center gap-2 cursor-pointer py-1">
+            <input type="checkbox" checked={setLayers ? layers.geology : false} onChange={() => {}} disabled />
+            <span className="switch-track shrink-0 opacity-50"></span>
+            <span className="text-slate-500 text-sm flex-1">Overlay opacity: {Math.round(layers.overlayOpacity * 100)}%</span>
+          </label>
+          <input type="range" min="15" max="90" step="5" value={Math.round(layers.overlayOpacity * 100)}
+            onChange={e => setLayers(prev => ({ ...prev, overlayOpacity: +e.target.value / 100 }))}
+            className="w-full accent-cyan-400 cursor-pointer" />
+        </div>
+      </BottomSheet>
+
+      {/* Legend bottom sheet (mobile) */}
+      <BottomSheet open={legendSheetOpen} onClose={() => setLegendSheetOpen(false)} title="Legend & data">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#22d3ee] rounded-full shrink-0"></span> <span className="text-sm text-slate-200">Planned route ({routeModel === 'leastcost' ? 'least-cost model' : 'straight baseline'})</span></div>
+          <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#a3e635] rounded-full shrink-0"></span> <span className="text-sm text-slate-200">Least-cost path / two-point route</span></div>
+          {abCompareGeom && <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#9ca3af] shrink-0"></span> <span className="text-sm text-slate-200">Straight-line baseline</span></div>}
+          {region === 'gale' && <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#a3e635] opacity-80 shrink-0"></span> <span className="text-sm text-slate-200">Synthetic gap connector</span></div>}
+          {region === 'jezero' && <div className="flex items-center gap-2"><span className="w-3 h-3 border border-[#7cc4ff] bg-[#7cc4ff]/20 rounded-sm shrink-0"></span> <span className="text-sm text-slate-200">USGS geology units (SIM 3464)</span></div>}
+          <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#cc3333] shrink-0"></span> <span className="text-sm text-slate-200">Deferred / dropped leg</span></div>
+          {region === 'gale'
+            ? <div className="flex items-center gap-2"><span className="w-3.5 h-0.5 bg-[#f97316] rounded-full shrink-0"></span> <span className="text-sm text-slate-200">NASA traverse geometry (MSL)</span></div>
+            : <div className="flex items-center gap-2"><span className="w-3.5 border-t-2 border-dashed border-[#f97316] shrink-0"></span> <span className="text-sm text-slate-200">Recorded rover positions</span></div>}
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full border border-[#f97316] bg-[#f97316]/40 shrink-0"></span> <span className="text-sm text-slate-200">Recorded rover stop</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-900 shrink-0"></span> <span className="text-sm text-slate-200">Base marker</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] shrink-0"></span> <span className="text-sm text-slate-200">Your waypoint (draggable)</span></div>
+
+          <div className="pt-2 border-t border-cyan-900/40 text-sm text-slate-400 space-y-1">
+            {region === 'gale' ? (
+              <>
+                <div><a href="https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">Gale DEM (USGS MSL mosaic 1 m v3)</a></div>
+                <div><a href="https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">MSL waypoint records (NASA MMGIS)</a></div>
+                <div><a href="http://crism.jhuapl.edu/msl_landing_sites/index_news.php" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">CRISM Gale mosaic (JHU/APL)</a></div>
+              </>
+            ) : (
+              <a href="https://pubs.usgs.gov/publication/sim3464" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">Data sources (USGS SIM 3464 & NASA)</a>
+            )}
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -12,6 +12,13 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
         </div>
       )}
 
+      {appMode === 'planner' && (
+        <div className="p-2.5 rounded-lg bg-[#070d18]/70 border border-cyan-900/40 text-xs text-slate-300 space-y-1">
+          <div><strong className="text-cyan-400">Scenario assumption:</strong> 60 min dwell per science stop.</div>
+          <div className="text-slate-400"><strong>Order = shortest route.</strong> Priority only decides what gets dropped if time runs short.</div>
+        </div>
+      )}
+
       {base && (
         <div key={base.id} className="station-card">
           <div className="station-head">
@@ -163,41 +170,35 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
               </div>
             </div>
 
-            {s.objective && (
-              <div className={`station-objective ${dropped ? 'line-through' : ''}`}>
-                {s.objective}
-              </div>
-            )}
-
             {dropped && (
-              <div className="station-deferred-note">
+              <div className="station-deferred-note px-3 py-1">
                 Deferred this EVA (lowest-priority non-must-have to meet time window).
               </div>
             )}
 
-            {(s.flagsShort || s.flags || []).filter(Boolean).map(f => (
-              <div key={f} className="flag mx-3 my-0.5">
-                <span>⚠</span>
-                <span>{f}</span>
-              </div>
-            ))}
-
             <div className="station-details">
-              <details key={dropped ? 'd' : 'k'} className="disclosure mt-2">
-                <summary className="text-xs">Objective, caveats{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}</summary>
-                <div className="disclosure-body space-y-2">
+              <details key={dropped ? 'd' : 'k'} className="disclosure mt-1.5">
+                <summary className="text-xs cursor-pointer py-1.5">
+                  Details, caveats{s.photo ? ', photo' : ''}
+                </summary>
+                <div className="disclosure-body space-y-2 pt-2">
+                  {s.objective && (
+                    <div className={`station-objective ${dropped ? 'line-through' : ''}`}>
+                      {s.objective}
+                    </div>
+                  )}
+                  {(s.flagsShort || s.flags || []).filter(Boolean).map(f => (
+                    <div key={f} className="flag my-0.5">
+                      <span>⚠</span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
                   {s.unitDescription && (
                     <div className="text-slate-400 text-xs">
                       {s.unitDescription}{' '}
                       <a href="https://pubs.usgs.gov/sim/3464/sim3464.pdf" target="_blank" rel="noreferrer" className="underline text-cyan-400">USGS SIM 3464 map sheet</a>
                     </div>
                   )}
-                  {(s.flags || []).map(f => (
-                    <div key={f} className="flag">
-                      <span>⚠</span>
-                      <span>{f}</span>
-                    </div>
-                  ))}
                   {s.photo && (
                     <div>
                       <div className="station-media rounded-lg mt-1">

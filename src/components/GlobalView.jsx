@@ -309,7 +309,8 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
 
   return (
     <div className="global-view" style={{ position: 'absolute', inset: 0 }} ref={canvasWrapRef}>
-      <Canvas camera={{ position: homePos, fov: 42 }} style={{ background: '#05070c' }}>
+      <Canvas camera={{ position: homePos, fov: 42 }} style={{ background: '#05070c' }}
+        dpr={typeof window !== 'undefined' && window.innerWidth <= 767 ? 2 : undefined}>
         <ResetGlobeCamera resetKey={resetKey} homePos={homePos} setSpin={setSpin} />
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 2, 4]} intensity={1.1} />

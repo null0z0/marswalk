@@ -7,14 +7,14 @@ export default function TimeControl({ windowMin, dwellMin, paceKmh, setWindowMin
           type="button"
           onClick={overrunApplied ? onUndoOverrun : onOverrun}
           disabled={!overrunApplied && !overrunLeft}
-          className={`btn flex-1 min-w-[150px] btn-sm font-bold ${overrunApplied ? 'btn-primary' : 'btn-delay'}`}
+          className={`btn flex-1 min-w-[150px] min-h-[44px] font-bold ${overrunApplied ? 'btn-primary' : 'btn-delay'}`}
         >
           {overrunApplied ? '↶ Undo +60 min overrun' : '⏱ +60 min overrun at stop'}
         </button>
         <button
           type="button"
           onClick={onReset}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary min-h-[44px] px-4"
         >
           Reset plan
         </button>

@@ -11,6 +11,7 @@ import SolTimeline from './components/SolTimeline.jsx';
 import HistoricalEvents from './components/HistoricalEvents.jsx';
 import ElevationProfile from './components/ElevationProfile.jsx';
 import RoutePointDetails from './components/RoutePointDetails.jsx';
+import RadiationCard from './components/RadiationCard.jsx';
 import MissionBrief from './components/MissionBrief.jsx';
 import GlobalView from './components/GlobalView.jsx';
 import RouteCompare from './components/RouteCompare.jsx';
@@ -578,7 +579,9 @@ export default function App() {
                 abGeometryParts={traverseResult && traverseResult.ok ? traverseResult.pathParts : null}
                 abCompareGeom={appMode === 'route' ? abCompareGeom : null}
                 showPlan={appMode === 'planner'}
-                resetKey={mapResetKey} />
+                resetKey={mapResetKey}
+                onResetView={resetView}
+                onResetPlan={resetPlan} />
             </div>
 
             {terrainMounted && (
@@ -680,6 +683,30 @@ export default function App() {
             </div>
           </div>
         </main>
+
+        {/* Sticky route summary bar on mobile (visible when a route exists) */}
+        {((appMode === 'route' && abFrom && abTo && abMetrics) || (appMode === 'planner' && plan)) && (
+          <div className="sticky-summary-bar">
+            <div className="sticky-summary-content">
+              <span className="sticky-summary-label">{appMode === 'route' ? 'Route' : 'Plan'}</span>
+              {appMode === 'route' && abMetrics && (
+                <>
+                  <span className="sticky-summary-value">{(abMetrics.dist / 1000).toFixed(2)} km</span>
+                  <span className="sticky-summary-divider">·</span>
+                  <span className="sticky-summary-value">{Math.round(abMetrics.minutes)} min</span>
+                  {abMetrics.asc > 0 && <><span className="sticky-summary-divider">·</span> <span className="sticky-summary-value">+{Math.round(abMetrics.asc)} m</span></>}
+                </>
+              )}
+              {appMode === 'planner' && (
+                <>
+                  <span className="sticky-summary-value">{Math.round((plan.elapsed + plan.sim.total))} / {windowMin} min</span>
+                  <span className="sticky-summary-divider">·</span>
+                  <span className="sticky-summary-value">{((plan.visitedLegs.reduce((a, l) => a + l.metrics.dist, 0) + plan.sim.dist) / 1000).toFixed(2)} km</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="rail rail--control rail-scroll">
           {appMode === 'planner' && <TimeControl windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh}
@@ -835,6 +862,8 @@ export default function App() {
           {appMode === 'route' && (fromStation || toStation) && (
             <RoutePointDetails fromStation={fromStation} toStation={toStation} />
           )}
+
+          {appMode === 'route' && <RadiationCard region={region} />}
 
           {appMode === 'route' && abPlan && (
             <ElevationProfile plan={abPlan} stations={realPlaces} legsData={legs} geojson={region === 'jezero' ? geojson : null} />

@@ -1,16 +1,8 @@
 import { memo } from 'react';
 
-function radiationLevel(usGyPerDay) {
-  if (usGyPerDay == null) return null;
-  if (usGyPerDay < 100) return 'Low';
-  if (usGyPerDay < 250) return 'Moderate';
-  return 'High';
-}
-
 function StationDetailCard({ station, role }) {
   if (!station) return null;
   const flags = (station.flagsShort || station.flags || []).filter(Boolean);
-  const level = station.radiationUsGyPerDay != null ? radiationLevel(station.radiationUsGyPerDay) : null;
 
   return (
     <div className="station-card">
@@ -55,28 +47,6 @@ function StationDetailCard({ station, role }) {
             )}
           </div>
         )}
-
-        {/* Radiation environment card */}
-        <div className="mt-2 pt-2 border-t border-slate-800/50">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-slate-200 text-xs">Radiation environment</span>
-            {level ? (
-              <span className={`chip chip--${level === 'Low' ? 'green' : level === 'Moderate' ? 'amber' : 'mars'} text-xs`}>
-                {level} · {station.radiationUsGyPerDay} µGy/day
-              </span>
-            ) : (
-              <span className="chip chip--cyan text-xs">No surface data</span>
-            )}
-          </div>
-          <div className="text-xs text-slate-400 leading-relaxed">
-            {station.radiationUsGyPerDay != null
-              ? `Estimated average surface dose rate: ${station.radiationNote}`
-              : station.radiationNote}
-          </div>
-          <div className="text-xs text-slate-400 mt-0.5">
-            Surface radiation is context only — it is not used by the route planner and does not change leg time or cost.
-          </div>
-        </div>
 
         {flags.length > 0 && (
           <div className="space-y-1 mb-2">

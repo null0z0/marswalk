@@ -31,14 +31,20 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNot
         </div>
       )}
 
-      <div className="plan-table-wrap">
-        <table className="plan-table">
+      <div className={`p-2.5 rounded-lg font-mono text-xs flex items-center justify-between border ${fits ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300' : 'bg-rose-950/40 border-rose-500/50 text-rose-300'}`}>
+        <span>Total: <b>{isFinite(total) ? Math.round(total) : '—'}</b> / {Math.round(windowMin)} min</span>
+        <span className="font-bold uppercase tracking-wider">{fits ? 'FITS BUDGET' : 'EXCEEDS BUDGET'}</span>
+      </div>
+
+      <div className="plan-table-wrap overflow-x-auto">
+        <table className="plan-table min-w-[320px]">
           <thead>
             <tr>
               <th>Leg</th>
               <th className="num">Dist</th>
-              <th className="num">Asc</th>
-              <th className="num">Time</th>
+              <th className="num">Walk</th>
+              <th className="num">Dwell</th>
+              <th className="num">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -53,11 +59,9 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNot
                     </span>
                   </td>
                   <td className="num">{l.metrics.dist.toFixed(0)} m</td>
-                  <td className="num">+{l.metrics.asc.toFixed(0)} m</td>
-                  <td className="num">
-                    <div>{(l.walkMin + l.dwellUsed).toFixed(0)} min</div>
-                    <span className="row-sub">done @ {l.paceUsed.toFixed(1)}</span>
-                  </td>
+                  <td className="num">{l.walkMin.toFixed(0)}m</td>
+                  <td className="num">{l.dwellUsed.toFixed(0)}m</td>
+                  <td className="num font-semibold">{(l.walkMin + l.dwellUsed).toFixed(0)}m</td>
                 </tr>
               );
             })}
@@ -73,11 +77,9 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNot
                     </span>
                   </td>
                   <td className="num">{l.metrics.dist.toFixed(0)} m</td>
-                  <td className="num">+{l.metrics.asc.toFixed(0)} m</td>
-                  <td className="num">
-                    <div>{(l.metrics.minutes + dwellPart).toFixed(0)} min</div>
-                    <span className="row-sub">end {Math.round(clock)}m</span>
-                  </td>
+                  <td className="num">{l.metrics.minutes.toFixed(0)}m</td>
+                  <td className="num">{dwellPart}m</td>
+                  <td className="num font-semibold">{(l.metrics.minutes + dwellPart).toFixed(0)}m</td>
                 </tr>
               );
             })}
@@ -116,7 +118,7 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNot
       {onPinA && (
         <div className="pt-2 border-t border-cyan-900/40">
           {!planA ? (
-            <button type="button" onClick={onPinA} className="btn btn-secondary btn-sm w-full">
+            <button type="button" onClick={onPinA} className="btn btn-primary min-h-[44px] w-full font-bold">
               Pin as Plan A (compare)
             </button>
           ) : (
