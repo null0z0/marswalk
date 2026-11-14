@@ -348,7 +348,7 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse"></span>
             Layers
           </span>
-          <span className="text-[10px] text-cyan-500/80 font-mono">HUD</span>
+          <span className="text-xs text-cyan-500/80 font-mono">HUD</span>
         </summary>
 
         <div className="mt-2 space-y-2 pt-2 border-t border-cyan-900/40">
@@ -547,7 +547,7 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>
             Legend & Data
           </span>
-          <span className="text-[10px] text-cyan-500/80 font-mono">INFO</span>
+          <span className="text-xs text-cyan-500/80 font-mono">INFO</span>
         </summary>
 
         <div className="mt-2 space-y-1.5 pt-2 border-t border-cyan-900/40 text-xs">
@@ -600,8 +600,6 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
               <a href="https://pubs.usgs.gov/publication/sim3464" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline break-all">Data sources (USGS SIM 3464 & NASA)</a>
             )}
           </div>
-        </div>
-      </details>
         </div>
       </details>
     </div>

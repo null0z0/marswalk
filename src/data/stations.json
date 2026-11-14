@@ -19,7 +19,10 @@
     ],
     "src": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json",
     "region": "jezero",
-    "short": "Three Forks depot"
+    "short": "Three Forks depot",
+    "radiationUsGyPerDay": null,
+    "radiationType": null,
+    "radiationNote": "Not directly measured \u2014 no published surface RAD record for Jezero Crater. Estimate only."
   },
   {
     "id": "Wildcat",
@@ -41,7 +44,10 @@
     "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
     "region": "jezero",
     "meda": "Measured on sol 502 by the rover's MEDA weather station (PDS calibrated products CAL_ATS/CAL_PS, units kelvin/pascal, no fill or special constants declared in the labels; the parsed columns contained no empty, non-numeric, or non-finite cells (39432 ATS + 38946 PS data rows plus one header line each; the labels' record counts 39433/38947 include the header). No instrument-quality filtering was applied beyond this. Air temperature by sensor in C, sol min-max: T1 -84.5 to -16.2, T2 -82.9 to -23.7, T3 -81.8 to -13.7, T4 -78.8 to -2.3, T5 -79.8 to -16.0. Sensor positions: T1 (RSM 50 deg), T2 (RSM 155 deg), T3 (RSM 290 deg), T4 (RFB port/pilot), T5 (RFB starboard/co-pilot). Surface pressure: BAROCAP1 779.8-818.8 Pa, BAROCAP2 770.0-809.3 Pa, BAROCAP3 770.0-809.1 Pa. Recorded context only - conditions are not used by the planner.",
-    "sol": 502
+    "sol": 502,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
   },
   {
     "id": "Skinner",
@@ -65,7 +71,10 @@
     "src": "https://www.nasa.gov/news-release/nasas-perseverance-rover-investigates-geologically-rich-mars-terrain/",
     "region": "jezero",
     "meda": "Measured on sol 477 by the rover's MEDA weather station (PDS calibrated products CAL_ATS/CAL_PS, units kelvin/pascal, no fill or special constants declared in the labels; the parsed columns contained no empty, non-numeric, or non-finite cells (30956 ATS + 30328 PS data rows plus one header line each; the labels' record counts 30957/30329 include the header). No instrument-quality filtering was applied beyond this. Air temperature by sensor in C, sol min-max: T1 -80.0 to -20.5, T2 -78.4 to -8.7, T3 -78.7 to -9.7, T4 -76.7 to -15.3, T5 -77.0 to -21.6. Sensor positions: T1 (RSM 50 deg), T2 (RSM 155 deg), T3 (RSM 290 deg), T4 (RFB port/pilot), T5 (RFB starboard/co-pilot). Surface pressure: BAROCAP1 777.5-819.8 Pa, BAROCAP2 766.8-809.9 Pa, BAROCAP3 767.0-809.8 Pa. Recorded context only - conditions are not used by the planner.",
-    "sol": 477
+    "sol": 477,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
   },
   {
     "id": "Kukaklek",
@@ -85,7 +94,10 @@
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-kukaklek-sample-16/",
     "region": "jezero",
-    "sol": 629
+    "sol": 629,
+    "radiationUsGyPerDay": null,
+    "radiationType": null,
+    "radiationNote": "Not directly measured \u2014 no published surface RAD record for Jezero Crater. Estimate only."
   },
   {
     "id": "Shuyak",
@@ -108,7 +120,10 @@
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
     "region": "jezero",
-    "sol": 565
+    "sol": 565,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
   },
   {
     "id": "Mageik",
@@ -131,7 +146,10 @@
     ],
     "src": "https://science.nasa.gov/resource/meet-the-mars-samples-shuyak-and-mageik-samples-14-and-15/",
     "region": "jezero",
-    "sol": 609
+    "sol": 609,
+    "radiationUsGyPerDay": 180,
+    "radiationType": "estimated",
+    "radiationNote": "Estimated from Mars surface radiation models and orbital data (no direct Jezero surface measurement). Gale MSL RAD measured ~210 \u00b5Gy/day average."
   },
   {
     "id": "GaleBase",
@@ -153,7 +171,10 @@
     "src": "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json",
     "short": "Scenario start (sol 59)",
     "sol": 59,
-    "scenarioOnly": true
+    "scenarioOnly": true,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day). Same coordinates as Rocknest."
   },
   {
     "id": "Rocknest",
@@ -176,7 +197,10 @@
     "photo": "/img/gale/rocknest.jpg",
     "photoId": "0059ML0002690010102306E01",
     "photoNote": "MSL Mastcam left frame (0059ML0002690010102306E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/29246",
-    "sol": 59
+    "sol": 59,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
   },
   {
     "id": "Shaler",
@@ -199,7 +223,10 @@
     "photo": "/img/gale/shaler.jpg",
     "photoId": "0120ML0007520010103767E01",
     "photoNote": "MSL Mastcam left frame (0120ML0007520010103767E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/42459",
-    "sol": 120
+    "sol": 120,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
   },
   {
     "id": "JohnKleinCumberland",
@@ -224,7 +251,10 @@
     "photo": "/img/gale/drillsites.jpg",
     "photoId": "0182ML0007400000105276E01",
     "photoNote": "MSL Mastcam left frame (0182ML0007400000105276E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/57908",
-    "sol": 166
+    "sol": 166,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
   },
   {
     "id": "Departure",
@@ -247,6 +277,9 @@
     "photo": "/img/gale/departure.jpg",
     "photoId": "0324ML0013150010107838E01",
     "photoNote": "MSL Mastcam left frame (0324ML0013150010107838E01). NASA metadata confirms sol and camera; content attribution from the rover position that sol. NASA page: https://mars.nasa.gov/raw_images/80376",
-    "sol": 324
+    "sol": 324,
+    "radiationUsGyPerDay": 210,
+    "radiationType": "measured",
+    "radiationNote": "MSL RAD surface measurement, Gale Crater average (~0.21 mGy/day; Hassler et al., Science 2013)."
   }
 ]

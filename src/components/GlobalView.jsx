@@ -392,34 +392,34 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
 
 
       {selected && (
-        <div style={{ position: 'absolute', top: 128, right: 8, zIndex: 1000, maxWidth: 300 }}
-          className="bg-[#0d1420]/95 border border-gray-700 rounded p-2 text-[10px] text-gray-300">
+        <div style={{ position: 'absolute', top: 128, right: 8, zIndex: 1000, maxWidth: 320 }}
+          className="bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
           <div className="flex items-start justify-between gap-2">
-            <b className="text-gray-100">{selected.name}</b>
+            <b className="text-slate-100">{selected.name}</b>
             <button type="button" aria-label="Close site info" onClick={() => setSelected(null)}
-              className="text-gray-500 hover:text-gray-200">x</button>
+              className="text-slate-400 hover:text-white">✕</button>
           </div>
           <div>{selected.mission} ({selected.agency}){selected.landing_date_utc ? ` - ${selected.landing_date_utc}` : ''}</div>
-          <div className="italic">{selected.st.label}{selected.region ? ` - ${selected.region}` : ''}</div>
-          <div className="mt-1 text-gray-500">
-            Context position for orientation - not a routing target, not geodetic precision.
+          <div className="italic text-slate-300">{selected.st.label}{selected.region ? ` - ${selected.region}` : ''}</div>
+          <div className="mt-1 text-slate-400">
+            Context position for orientation — not a routing target.
           </div>
-          {selected.source_quote && <div className="mt-1 text-gray-500">Source: {selected.source_quote.slice(0, 220)}</div>}
+          {selected.source_quote && <div className="mt-1 text-slate-400">Source: {selected.source_quote.slice(0, 220)}</div>}
         </div>
       )}
 
-      <div style={{ maxWidth: 330, flexShrink: 0 }}
-        className="bg-[#0d1420]/95 border border-gray-700 rounded p-2 text-[10px] text-gray-300">
-        <b className="text-gray-200">Coarse global elevation - sampled at ~12.8 km/px (experimental).</b>
-        <div className="text-gray-500 mb-1">Great-circle sampling of the coarse grid - NOT terrain-aware pathfinding, not a route. USGS HRSC/MOLA v2 (MOLA CC0 + HRSC CC BY-SA 3.0 IGO).</div>
+      <div style={{ maxWidth: 340, flexShrink: 0 }}
+        className="bg-[#070d18]/95 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
+        <b className="text-slate-200">Coarse global elevation — sampled at ~12.8 km/px.</b>
+        <div className="text-slate-400 mb-1.5">Great-circle sampling of coarse grid — NOT terrain-aware pathfinding. USGS HRSC/MOLA v2.</div>
         <div className="flex items-center gap-1.5">
           <select aria-label="Profile from" value={demFrom} onChange={e => setDemFrom(e.target.value)}
-            className="flex-1 min-w-0 bg-[#0d1420] border border-gray-700 rounded px-1 py-0.5 text-[10px] text-gray-200">
+            className="station-select flex-1 min-w-0 text-xs">
             <option value="">From site...</option>
             {(catalog ? catalog.sites : []).map(s => <option key={s.id} value={s.id}>{s.name.split(' - ')[0].slice(0, 26)}</option>)}
           </select>
           <select aria-label="Profile to" value={demTo} onChange={e => setDemTo(e.target.value)}
-            className="flex-1 min-w-0 bg-[#0d1420] border border-gray-700 rounded px-1 py-0.5 text-[10px] text-gray-200">
+            className="station-select flex-1 min-w-0 text-xs">
             <option value="">To site...</option>
             {(catalog ? catalog.sites : []).filter(s => s.id !== demFrom).map(s => <option key={s.id} value={s.id}>{s.name.split(' - ')[0].slice(0, 26)}</option>)}
           </select>
@@ -449,7 +449,7 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
               catch (e) { setDemError('fetch/decode failed: ' + (e && e.message ? e.message : 'network')); }
               setDemBusy(false);
             }}
-            className="bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-[10px] text-gray-200 disabled:opacity-40">
+            className="btn btn-secondary btn-sm text-xs">
             {demBusy ? 'reading...' : 'Sample'}
           </button>
         </div>
@@ -457,7 +457,7 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         {demResult && (
           <div className="mt-1">
             <div>{demResult.distKm} km great-circle | min {demResult.minM} m / max {demResult.maxM} m | asc +{demResult.ascentM} m / desc -{demResult.descentM} m</div>
-            <div className="text-gray-500">actual sample spacing ~{demResult.actualSpacingM} m (coarse overview), {demResult.samples} samples | {demResult.method}</div>
+            <div className="text-slate-400">actual sample spacing ~{demResult.actualSpacingM} m, {demResult.samples} samples | {demResult.method}</div>
             <svg width="300" height="36" className="mt-0.5" aria-label="Elevation profile">
               {(() => {
                 const pts = demResult.pts.filter(p => p.elevM != null);
@@ -471,13 +471,13 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         )}
       </div>
 
-      <div style={{ maxWidth: 330, flexShrink: 1, minHeight: 0, overflowY: 'auto' }}
-        className="bg-[#0d1420]/95 border border-amber-800 rounded p-2 text-[10px] text-gray-300">
-        <b className="text-amber-300">Recorded natural events - pick one to fly there.</b>
-        <div className="text-gray-500 mb-1">Verified historical records with their observation dates; Sol shown only when the mission documented it. Region-level records show the region, never a guessed point. Historical archive, not current conditions.</div>
+      <div style={{ maxWidth: 340, flexShrink: 1, minHeight: 0, overflowY: 'auto' }}
+        className="bg-[#070d18]/95 border border-amber-600/30 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
+        <b className="text-amber-300">Recorded natural events — select to view</b>
+        <div className="text-slate-400 mb-1.5 leading-normal">Verified historical records with observation dates. Historical archive, not current conditions.</div>
         {evMarkers.map(m => (
-          <div key={m.id} className="mt-1 pt-1 border-t border-gray-800">
-            <div className="text-gray-400">{EV_PLACE[m.id] || m.id}{m.kind === 'region' ? ' - region-level records' : ''}</div>
+          <div key={m.id} className="mt-1.5 pt-1.5 border-t border-slate-800">
+            <div className="text-slate-400">{EV_PLACE[m.id] || m.id}{m.kind === 'region' ? ' — region-level' : ''}</div>
             {m.events.map(e => (
               <button key={e.id} type="button"
                 onClick={() => {
@@ -486,8 +486,8 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
                   setFit({ dir: [v.x, v.y, v.z], dist: 2.3 });
                   setSpin(false);
                 }}
-                className="block w-full text-left text-gray-200 hover:text-amber-200 py-0.5">
-                {TYPE_LABEL[e.type] || e.type} - {e.sol != null ? `Sol ${e.sol} · ` : ''}{e.date_utc}
+                className="block w-full text-left text-slate-200 hover:text-amber-200 py-0.5 text-xs">
+                {TYPE_LABEL[e.type] || e.type} — {e.sol != null ? `Sol ${e.sol} · ` : ''}{e.date_utc}
               </button>
             ))}
           </div>
@@ -500,20 +500,20 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
         const others = selectedEv.events.filter(x => x.id !== e.id);
         return (
           <div style={{ position: 'absolute', top: 180, right: 8, zIndex: 1000, maxWidth: 320, maxHeight: '62vh', overflowY: 'auto' }}
-            className="bg-[#0d1420] border border-amber-800 rounded p-2 text-[10px] text-gray-300">
+            className="bg-[#070d18]/95 border border-amber-600/40 rounded-xl p-3 text-xs text-slate-200 shadow-xl backdrop-blur-md">
             <div className="flex items-start justify-between gap-2">
               <b className="text-amber-300">{TYPE_LABEL[e.type] || e.type}</b>
               <button type="button" aria-label="Close event info" onClick={() => setSelectedEv(null)}
-                className="text-gray-500 hover:text-gray-200">x</button>
+                className="text-slate-400 hover:text-white">✕</button>
             </div>
-            <div className="text-gray-100">{e.sol != null ? `Sol ${e.sol} (${e.sol_mission || 'rover sol'}) · ` : ''}{e.date_utc} - {e.location}</div>
+            <div className="text-slate-100">{e.sol != null ? `Sol ${e.sol} (${e.sol_mission || 'rover sol'}) · ` : ''}{e.date_utc} - {e.location}</div>
             <div className="mt-0.5 text-amber-200/90">{selectedEv.anchorNote}</div>
             <button type="button" onClick={() => setEvDetailOpen(o => !o)}
               className="mt-1 text-cyan-400 hover:text-cyan-300 underline">
               {evDetailOpen ? 'Hide details' : 'Details + source'}
             </button>
             {evDetailOpen && (
-              <div className="mt-1 pt-1 border-t border-gray-800">
+              <div className="mt-1 pt-1 border-t border-slate-800 text-xs">
                 {e.summary && <div>{e.summary}</div>}
                 {e.estimated_fields && e.estimated_fields.length > 0 && (
                   <div className="mt-0.5 text-amber-200/80">Estimated/inferred (not measured): {e.estimated_fields.join('; ')}</div>
@@ -522,18 +522,18 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
                   <div className="mt-0.5">Source: <a href={e.source_url} target="_blank" rel="noreferrer"
                     className="text-cyan-400 underline">{e.credit || e.source_url}</a></div>
                 )}
-                <div className="mt-1 text-gray-500">
-                  Historical record - not current conditions. Observation date is when it was detected; publication may be years later.
+                <div className="mt-1 text-slate-400">
+                  Historical record — not current conditions.
                 </div>
               </div>
             )}
             {others.length > 0 && (
-              <div className="mt-1 pt-1 border-t border-gray-800 text-gray-500">
+              <div className="mt-1 pt-1 border-t border-slate-800 text-slate-400 text-xs">
                 Also recorded here:
                 {others.map(o => (
                   <button key={o.id} type="button" onClick={() => { setSelectedEvId(o.id); setEvDetailOpen(false); }}
-                    className="block w-full text-left text-gray-300 hover:text-amber-200 py-0.5">
-                    {TYPE_LABEL[o.type] || o.type} - {o.sol != null ? `Sol ${o.sol} · ` : ''}{o.date_utc}
+                    className="block w-full text-left text-slate-300 hover:text-amber-200 py-0.5 text-xs">
+                    {TYPE_LABEL[o.type] || o.type} — {e.sol != null ? `Sol ${o.sol} · ` : ''}{o.date_utc}
                   </button>
                 ))}
               </div>
@@ -544,12 +544,12 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
 
       <div ref={buttonsRef} style={{ position: 'absolute', right: 10, bottom: 52, zIndex: 1000 }} className="global-actions flex flex-col gap-1.5">
         <button type="button" onClick={() => onOpenRegion && onOpenRegion('jezero')}
-          className="bg-[#0d1420]/95 border border-lime-700 rounded px-2 py-1.5 text-[11px] text-lime-300 hover:bg-lime-950 text-left">
-          Open Jezero workspace - 20 m elevation, routing available
+          className="btn btn-primary btn-sm text-xs text-left justify-start">
+          Open Jezero workspace — 20 m elevation, routing available
         </button>
         <button type="button" onClick={() => onOpenRegion && onOpenRegion('gale')}
-          className="bg-[#0d1420]/95 border border-lime-700 rounded px-2 py-1.5 text-[11px] text-lime-300 hover:bg-lime-950 text-left">
-          Open Gale workspace - 2 m elevation, routing available
+          className="btn btn-primary btn-sm text-xs text-left justify-start">
+          Open Gale workspace — 2 m elevation, routing available
         </button>
       </div>
     </div>

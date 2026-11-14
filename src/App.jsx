@@ -708,7 +708,7 @@ export default function App() {
 
             <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2 pt-1">
               <div>
-                <label className="block text-[11px] font-mono text-cyan-400 mb-1">FROM</label>
+                <label className="block text-xs font-mono text-cyan-400 mb-1">FROM</label>
                 <select aria-label="Route from" className="station-select w-full"
                   value={abFrom || ''} onChange={e => setAbFrom(e.target.value || null)}>
                   <option value="">Origin...</option>
@@ -717,7 +717,7 @@ export default function App() {
               </div>
               <div className="text-cyan-400 font-bold pt-4 text-center">→</div>
               <div>
-                <label className="block text-[11px] font-mono text-cyan-400 mb-1">TO</label>
+                <label className="block text-xs font-mono text-cyan-400 mb-1">TO</label>
                 <select aria-label="Route to" className="station-select w-full"
                   value={abTo || ''} onChange={e => setAbTo(e.target.value || null)}>
                   <option value="">Destination...</option>
