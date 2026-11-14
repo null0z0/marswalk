@@ -44,7 +44,7 @@ function stationIcon(s, dropped, visited, dim = false) {
   return L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8], html: `<div style="${dim ? 'opacity:0.25;' : ''}">${shape ? `<div style="${shape}"></div>` : ''}</div>` });
 }
 
-function FitStations({ stations, maxFitZoom, orthoBounds }) {
+function FitStations({ stations, maxFitZoom, orthoBounds, resetKey }) {
   const map = useMap();
   useEffect(() => {
     // keep the view inside real imagery: the station cluster sits near the NE
@@ -53,15 +53,16 @@ function FitStations({ stations, maxFitZoom, orthoBounds }) {
     map.setMaxBounds(ob.pad(0.005));
     const b = L.latLngBounds(stations.filter(s => s.lat != null).map(s => [s.lat, s.lon]));
     map.fitBounds(b.pad(0.6), { animate: false, maxZoom: maxFitZoom });
-  }, [map, stations, maxFitZoom, orthoBounds]);
+  }, [map, stations, maxFitZoom, orthoBounds, resetKey]);
   return null;
 }
 
 // Forwards map clicks to the parent while "add waypoint" mode is active.
-function MapClickHandler({ addMode, onMapClick }) {
+function MapClickHandler({ addMode, onMapClick, onInspectPoint }) {
   useMapEvents({
     click(e) {
       if (addMode && onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
+      if (!addMode && onInspectPoint) onInspectPoint(e.latlng.lat, e.latlng.lng);
     },
   });
   return null;
@@ -87,7 +88,7 @@ const OVERLAY_LAYERS = (region) => {
   return base;
 };
 
-export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, showPlan = true }) {
+export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, showPlan = true, mapResetKey, onInspectPoint = null }) {
   const ortho = ORTHO[region] || ORTHO.jezero;
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
@@ -107,8 +108,8 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
     <div className="relative h-full w-full">
       <MapContainer crs={crs} center={[(ortho.bounds[0][0] + ortho.bounds[1][0]) / 2, (ortho.bounds[0][1] + ortho.bounds[1][1]) / 2]} zoom={5} maxZoom={9} doubleClickZoom={false}
         style={{ height: '100%', width: '100%', background: '#0a0e17', cursor: addMode ? 'crosshair' : '' }}>
-        <MapClickHandler addMode={addMode} onMapClick={onMapClick} />
-        <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} />
+        <MapClickHandler addMode={addMode} onMapClick={onMapClick} onInspectPoint={onInspectPoint} />
+        <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} resetKey={mapResetKey} />
         <ScaleControl />
         <ImageOverlay key={region} url={ortho.url} bounds={ortho.bounds} opacity={1} />
         {/* honest coverage boundary: outside this rectangle there is no imagery */}
@@ -148,6 +149,14 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             </Tooltip>
           </CircleMarker>
         ))}
+        {layers.radiation && region === 'gale' && (
+          <CircleMarker key="radiation" center={[-4.5899957, 137.4483418]} radius={6}
+            pathOptions={{ color: '#f87171', weight: 2, fillColor: '#fca5a5', fillOpacity: 0.5, opacity: 0.9 }}>
+            <Tooltip direction="top" offset={[0, -8]} className="station-label" permanent>
+              Radiation (Curiosity RAD): 0.64 ± 0.12 mSv/day dose equivalent
+            </Tooltip>
+          </CircleMarker>
+        )}
         {showPlan && layers.plannedRoute && routeModel === 'straight' && routePts.length > 1 && <Polyline positions={routePts} pathOptions={{ color: '#22d3ee', weight: 3 }} />}
         {showPlan && layers.plannedRoute && routeModel === 'leastcost' && legsProvider && plan.visitedLegs.concat(plan.sim.legs).map((leg, i) => {
           // drawn geometry is exactly the A* path the metrics were sampled on
@@ -348,6 +357,27 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             </div>
           </details>
 
+          {/* Radiation */}
+          <details className="layer-group">
+            <summary className="layer-head">
+              <span className="layer-title">Radiation</span>
+              <span className="layer-count">{layers.radiation ? 1 : 0}/1</span>
+            </summary>
+            <div className="layer-body">
+              <label className="layer-check">
+                <input type="checkbox" checked={layers.radiation} onChange={() => toggle('radiation')} />
+                <span className="layer-check-box"></span>
+                Radiation intensity (Gale RAD)
+              </label>
+              {layers.radiation && region === 'gale' && (
+                <div className="layer-desc">Curiosity RAD surface measurement (Hassler et al., 2014). Gale Crater only - not measured or modelled for Jezero. Dose equivalent 0.64 ± 0.12 mSv/day.</div>
+              )}
+              {layers.radiation && region !== 'gale' && (
+                <div className="layer-desc">Not available for this region. The only radiation measurement in this tool is from Gale Crater (Curiosity RAD).</div>
+              )}
+            </div>
+          </details>
+
           {/* 5. Terrain Visualization */}
           {terrainMeta && (
             <details className="layer-group">
@@ -411,6 +441,7 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#a3e635]"></span> Your two-point route (same model{region === 'gale' ? ', or the recorded drive path when following it' : ''})</div>
           {region === 'gale' && <div className="flex items-center gap-1.5"><span className="w-3 border-t-2 border-dashed border-[#a3e635] opacity-80"></span> Synthetic gap connector (not recorded drive ground)</div>}
           {region === 'jezero' && <div className="flex items-center gap-1.5"><span className="w-3 h-3 border border-[#7cc4ff] bg-[#7cc4ff]/10 inline-block"></span> USGS geology unit boundaries (SIM 3464)</div>}
+          {region === 'gale' && layers.radiation && <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-[#f87171] bg-[#fca5a5]/40 inline-block"></span> Radiation intensity (Curiosity RAD, Gale)</div>}
           <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#cc3333]"></span> Deferred / dropped leg</div>
           {region === 'gale'
             ? <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#f97316]"></span> NASA recorded traverse geometry (MSL MMGIS drive polylines)</div>

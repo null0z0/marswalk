@@ -450,7 +450,7 @@ export default function GlobalView({ onOpenRegion, endpoints, abMetrics, routeMo
         <b className="text-gray-200">Coarse global elevation - sampled at ~12.8 km/px (experimental).</b>
 
       {geoSelected && (
-        <div style={{ position: 'absolute', bottom: 70, left: 10, zIndex: 1000, maxWidth: 260 }}
+        <div style={{ position: 'absolute', bottom: 140, left: 10, zIndex: 1000, maxWidth: 260 }}
           className="bg-[#0d1420]/95 border border-cyan-900 rounded p-2 text-[10px] text-gray-300">
           <div className="flex items-start justify-between gap-2 mb-1">
             <b className="text-cyan-400">{geoSelected.n}</b>

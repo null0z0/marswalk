@@ -12,6 +12,11 @@ import ElevationProfile from './components/ElevationProfile.jsx';
 import MissionBrief from './components/MissionBrief.jsx';
 import GlobalView from './components/GlobalView.jsx';
 import DemoCoach from './components/DemoCoach.jsx';
+import RadiationCard from './components/RadiationCard.jsx';
+import HistoricalEvents from './components/HistoricalEvents.jsx';
+import RoutePointDetails from './components/RoutePointDetails.jsx';
+import PointInspector from './components/PointInspector.jsx';
+import BottomSheet from './components/BottomSheet.jsx';
 import { MapIcon, TerrainIcon, ResetIcon, OrbitSmallIcon } from './components/Icons.jsx';
 import { buildPlan, legMetrics } from './lib/planner.js';
 import { buildTraverseGraph, traversePath, SNAP_TOLERANCE_M } from './lib/traverse.js';
@@ -77,6 +82,7 @@ export default function App() {
   const [layers, setLayers] = useState({
     geology: true, roverRoute: false, roverStops: false,
     elevRamp: false, hillshade: false, slope: false, contours: false, crismVna: false, overlayOpacity: 0.55,
+    radiation: false,
     // Per feature-type visibility (user request: each type independent, shapes not color alone)
     plannedRoute: true, droppedLegs: true, objectives: true, baseMarker: true, userWps: true,
   });
@@ -85,6 +91,9 @@ export default function App() {
   const [briefOpen, setBriefOpen] = useState(false);
   const [demoStep, setDemoStep] = useState(null);
   const [mapResetKey, setMapResetKey] = useState(0);
+  const [inspectedPoint, setInspectedPoint] = useState(null);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [bottomSheetContent, setBottomSheetContent] = useState(null);
   // The 3D scene is created on first use, then kept mounted so switching views
   // never tears down Leaflet or the WebGL context.
   const [terrainMounted, setTerrainMounted] = useState(false);
@@ -443,7 +452,9 @@ export default function App() {
                 legsProvider={activeLegs} routeModel={routeModel} setRouteModel={setRouteModel} abLeg={abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) ? [abFrom, abTo] : null}
                 abGeometry={traverseResult && traverseResult.ok ? traverseResult.pathLatLon : null}
                 abGeometryParts={traverseResult && traverseResult.ok ? traverseResult.pathParts : null}
-                showPlan={appMode === 'planner'} />
+                showPlan={appMode === 'planner'}
+                mapResetKey={viewMode !== 'global' ? mapResetKey : undefined}
+                onInspectPoint={(lat, lon) => { setInspectedPoint({ lat, lon }); setBottomSheetOpen(true); setBottomSheetContent('inspector'); }} />
             </div>
 
             {terrainMounted && (
@@ -515,14 +526,16 @@ export default function App() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                className="tool-toggle"
-                onClick={() => setMapResetKey((k) => k + 1)}
-              >
-                <ResetIcon />
-                <span>Reset view</span>
-              </button>
+              {viewMode !== 'global' && (
+                <button
+                  type="button"
+                  className="tool-toggle"
+                  onClick={() => setMapResetKey((k) => k + 1)}
+                >
+                  <ResetIcon />
+                  <span>Reset view</span>
+                </button>
+              )}
             </div>
 
             <div className="map-source">
@@ -592,6 +605,16 @@ export default function App() {
             )}
           </section>
 
+          {abFrom && abTo && (
+            <RoutePointDetails
+              fromStation={scenarioStations.find(s => s.id === abFrom)}
+              toStation={scenarioStations.find(s => s.id === abTo)} />
+          )}
+
+          <RadiationCard region={region} />
+
+          <HistoricalEvents region={region} />
+
           {appMode === 'planner' && <section className="panel text-xs space-y-1.5">
             <div className="eyebrow">Route options</div>
             <label className="flex items-center gap-2">
@@ -614,6 +637,23 @@ export default function App() {
           {appMode === 'planner' && <ElevationProfile plan={plan} stations={scenarioStations} legsData={legs} />}
         </div>
       </div>
+
+      {bottomSheetOpen && bottomSheetContent === 'inspector' && inspectedPoint && (
+        <BottomSheet
+          open={bottomSheetOpen}
+          onClose={() => { setBottomSheetOpen(false); setInspectedPoint(null); }}
+          title="Point inspector"
+          ariaLabel="Point inspector details">
+          <PointInspector
+            pt={inspectedPoint}
+            grid={activeLegs && activeLegs._grid}
+            geojson={geojson}
+            region={region}
+            stations={scenarioStations}
+            roverTrack={roverTrack}
+            onClear={() => { setBottomSheetOpen(false); setInspectedPoint(null); }} />
+        </BottomSheet>
+      )}
 
       <MissionBrief
         open={briefOpen}
