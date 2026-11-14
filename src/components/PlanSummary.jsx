@@ -88,7 +88,7 @@ export default function PlanSummary({ plan, windowMin, dwellMin, paceKmh, dtmNot
       <div className="flex items-center justify-between pt-1 font-mono text-xs">
         <span className="text-slate-300">Total: <b>{isFinite(total) ? Math.round(total) : '—'}</b> / {Math.round(windowMin)} min</span>
         <span className={`status-tag ${fits ? 'status-tag--nominal' : 'status-tag--bad'}`}>
-          {fits ? 'FITS BUDGET' : 'EXCEEDS BUDGET'}
+          {fits ? 'Fits budget' : 'Exceeds budget'}
         </span>
       </div>
 

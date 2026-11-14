@@ -101,6 +101,11 @@ export default function App() {
   // never tears down Leaflet or the WebGL context.
   const [terrainMounted, setTerrainMounted] = useState(false);
 
+  // Toast + undo snapshot must be declared before any early return so the
+  // Rules of Hooks are never violated (hooks run in the same order every render).
+  const [toast, setToast] = useState(null);
+  const prevPlanSnapshot = useRef(null);
+
   const scenario = scenarios[scenarioId];
   const regionStations = useMemo(
     () => stations.filter(s => (s.region || 'jezero') === ((stations.find(x => x.id === scenario.base) || {}).region || 'jezero')),
@@ -158,6 +163,14 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
+
+  // Auto-dismiss the toast after 6s. Declared before the loading early-return
+  // so hook order is stable across renders.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Runtime terrain engine: one grid object + one planner-compatible legs
   // provider per region. Every leg in the plan is computed from the grid at
@@ -401,9 +414,6 @@ export default function App() {
   function demoNext() { setDemoStep((s) => (s === null || s >= 2 ? null : s + 1)); }
   function demoOverrun() { recordStop(60); setDemoStep(2); }
 
-  const [toast, setToast] = useState(null);
-  const prevPlanSnapshot = useRef(null);
-
   const resetView = () => {
     setMapResetKey((k) => k + 1);
   };
@@ -462,12 +472,6 @@ export default function App() {
       }
     });
   };
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 6000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   return (
     <div className={`app-shell${viewMode === 'global' ? ' is-global' : ''}`}>
@@ -715,7 +719,17 @@ export default function App() {
                   {realPlaces.filter(s => s.lat != null).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
                 </select>
               </div>
-              <div className="text-cyan-400 font-bold pt-4 text-center">→</div>
+              <div className="flex flex-col items-center justify-center gap-1 pt-4">
+                <span className="text-cyan-400 font-bold text-center">→</span>
+                <button
+                  type="button"
+                  aria-label="Swap origin and destination"
+                  onClick={() => { const tmp = abFrom; setAbFrom(abTo); setAbTo(tmp); }}
+                  className="text-xs font-mono text-cyan-300 hover:text-cyan-200 bg-[#070d18]/40 border border-cyan-900/30 rounded px-1.5 py-0.5 active:scale-95 transition-transform"
+                >
+                  ⇄
+                </button>
+              </div>
               <div>
                 <label className="block text-xs font-mono text-cyan-400 mb-1">TO</label>
                 <select aria-label="Route to" className="station-select w-full"
