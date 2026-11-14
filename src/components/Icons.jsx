@@ -153,3 +153,30 @@ export function OrbitSmallIcon({ size = 16 }) {
     </svg>
   );
 }
+
+export function SwapIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="m7 16-4-4 4-4" />
+      <path d="M3 12h18" />
+      <path d="m17 8 4 4-4 4" />
+    </svg>
+  );
+}
+
+export function ArrowRightIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+export function InfoIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8h.01M11 12h1v4h1" />
+    </svg>
+  );
+}

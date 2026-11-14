@@ -133,3 +133,16 @@ describe('leastCostPath known-answer synthetic grids', () => {
     expect(r.model.gridM).toBe(10);
   });
 });
+
+describe('zero-length route (identical endpoints)', () => {
+  it('returns a 1-cell path with distM 0 - zero-length semantics, no invented geometry', () => {
+    const g = mkGrid(30, 30, 10, () => 0);
+    const p = pt(g, 7, 7);
+    const r = leastCostPath(g, p, { ...p });
+    expect(r).not.toBe(null);
+    expect(r.pathLatLon.length).toBe(1);
+    expect(r.pathGrid.length).toBe(1);
+    expect(r.distM).toBe(0);
+    expect(r.costM).toBe(0);
+  });
+});

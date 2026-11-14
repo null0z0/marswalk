@@ -57,7 +57,7 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
     <header className="mission-header">
       <div className="brand-row">
         <div className="brand-lockup">
-          <OrbitIcon size={34} />
+          <OrbitIcon size={32} />
           <div className="brand-copy">
             <div className="brand-title">MARSWALK</div>
             <div className="brand-sub">{scenarioLabel || 'Mission planner'}</div>
@@ -66,28 +66,47 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
 
         {appMode === 'planner' && <span className={`phase-status ${phaseStyle.className}`} role="status">
           <span className="status-mark" aria-hidden="true" />
-          {phaseStyle.label}
+          <span className="phase-status-label">{phaseStyle.label}</span>
         </span>}
 
         {setAppMode && (
-          <div className="segmented" role="group" aria-label="App mode" style={{ marginLeft: 'auto' }}>
-            <button type="button" className={appMode === 'route' ? 'is-active' : ''} onClick={() => setAppMode('route')}>Two-point route</button>
-            <button type="button" className={appMode === 'planner' ? 'is-active' : ''} onClick={() => setAppMode('planner')}>Mission planner</button>
-          </div>)}
+          <div className="segmented mode-tabs-header" role="group" aria-label="App mode">
+            <button
+              type="button"
+              className={appMode === 'route' ? 'is-active' : ''}
+              onClick={() => setAppMode('route')}
+              aria-label="Two-point route mode"
+            >
+              <span className="mode-tab-full">Two-point route</span>
+              <span className="mode-tab-compact">2-Point</span>
+            </button>
+            <button
+              type="button"
+              className={appMode === 'planner' ? 'is-active' : ''}
+              onClick={() => setAppMode('planner')}
+              aria-label="Mission planner mode"
+            >
+              <span className="mode-tab-full">Mission planner</span>
+              <span className="mode-tab-compact">Planner</span>
+            </button>
+          </div>
+        )}
 
         <div className="header-actions">
+          {appMode === 'planner' && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm objectives-toggle"
+              onClick={onOpenObjectives}
+              aria-label="Open science objectives"
+            >
+              <TargetIcon />
+              <span className="btn-label">Objectives</span>
+            </button>
+          )}
           <button
             type="button"
-            className="btn btn-secondary btn-sm objectives-toggle"
-            onClick={onOpenObjectives}
-            aria-label="Open science objectives"
-          >
-            <TargetIcon />
-            <span className="btn-label">Objectives</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm brief-toggle"
             onClick={onOpenBrief}
             aria-label="Open mission brief"
           >
@@ -95,6 +114,12 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
             <span className="btn-label">Mission brief</span>
           </button>
         </div>
+      </div>
+
+      <div className="mobile-instruction-bar" aria-live="polite">
+        {appMode === 'route'
+          ? 'Pick any two points on Mars to compute and compare paths.'
+          : 'Select science stops within your EVA time budget.'}
       </div>
 
       {appMode === 'route' && (
@@ -234,17 +259,25 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
 
       <div className="mission-context">
         <p className="context-copy">
-          <span className="context-long">
-            <strong>Pick any two real places - compare a computed route.</strong>{' '}
-            Computed at runtime on real NASA/USGS elevation data, as a straight-line
-            baseline or a slope-aware least-cost path. Add your own waypoints, or plan
-            a full science day against the clock and watch the planner explain every
-            trade-off.
-          </span>
-          <span className="context-short">
-            <strong>Real Mars places, computed routes.</strong> Pick two points; routing on
-            real NASA/USGS elevation data.
-          </span>
+          {appMode === 'route' ? (
+            <>
+              <span className="context-long">
+                <strong>Two-point route comparison.</strong> Pick any two real places to compare a computed route between them on real USGS elevation data (straight baseline vs slope-aware least-cost path).
+              </span>
+              <span className="context-short">
+                <strong>Two-point route.</strong> Compare straight baseline vs least-cost path on USGS terrain.
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="context-long">
+                <strong>Adaptive mission planner.</strong> Plan a science-driven traverse against the EVA time window. The planner optimizes visit order and defers lowest-priority science if time runs short, explaining every decision.
+              </span>
+              <span className="context-short">
+                <strong>Mission planner.</strong> Adaptive re-planning against EVA time budget.
+              </span>
+            </>
+          )}
         </p>
         {appMode === 'planner' && <div className="context-actions">
           <span className="next-stop">

@@ -1,12 +1,18 @@
-# MARSWalk Planner - Jezero Delta Front (NASA Space Apps 2026, Giza)
+# MARSWalk — Mars Mission Planner (NASA Space Apps 2026, Giza)
 
-Interactive demo: **adaptive science-driven re-planning for a Jezero Marswalk.**
-A crewed EVA (hypothetical) starts at the real Three Forks sample depot site and
-visits two real Perseverance delta-front stops near the Wildcat Ridge and
-Skinner Ridge sample locations. When a stop overruns its planned dwell time, the
-planner re-plans the remaining traverse against the EVA time window and defers
-the lowest-priority non-must-have objective - showing exactly what science is
-lost and why.
+One layered Mars map: real rover waypoints, the path each rover walked, distances between stations, 3D terrain, and a dated archive of natural events — built to help humans plan and execute any kind of Mars mission.
+
+## The idea
+
+Gather data from the rovers that went to Mars (Perseverance, Curiosity, …) and place it on **one map** with layers tied to each location and the path each rover walked. The goal is to help any human plan - and later execute - any kind of Mars mission.
+
+- **One map, all rovers:** clickable stations - Three Forks depot (sol 654), Wildcat Ridge (sol 502), Skinner Ridge (sol 477), Kukaklek, Shuyak, Mageik in Jezero; Rocknest, Shaler, drill sites, Departure in Gale. Each station carries its recorded position, sol, photo, and source.
+- **The path each rover walked:** recorded traverses; dashed synthetic connectors appear only where the archive has gaps, and are labeled as such - never passed off as driven ground.
+- **3D Mars:** rotatable globe (Viking MDIM 2.1 imagery) plus local 3D terrain (Jezero 20 m DTM, Gale 2 m DEM) with elevation, slope, hillshade, and contours.
+- **Distance between any two points:** two-point From → To mode - straight baseline vs. slope-aware least-cost route - reporting km, walk minutes, and ascent; the globe also measures great-circle distance.
+- **Natural events by date / Martian sol:** dust storms (regional and planet-encircling), dust devils, marsquakes (InSight M5), meteoroid impacts, polar avalanches - each with UTC date, rover sol, location, instruments, source, and estimates marked. A historical archive, not a forecast.
+- **Layers you control:** geology (USGS SIM 3464 Jezero), rover route, rover stops, elevation ramp, hillshade, slope, contours, CRISM 770 nm (Gale) - each independently toggleable.
+- **Views:** 2D map (Leaflet), 3D terrain (Three.js), Global globe.
 
 ## Run
 
@@ -15,75 +21,26 @@ npm install
 npm run dev      # dev server
 npm run build    # production build in dist/
 npm run preview  # serve the build
-npx vitest run   # planner unit tests (11)
+npx vitest run   # planner unit tests
 ```
 
-## The decision loop (the demo)
+## Data integrity
 
-1. Base plan: Base -> Wildcat Ridge -> Skinner Ridge -> Base.
-   At the declared assumptions (1.0 km/h pace, 60 min dwell per stop, 300 min
-   window) the plan totals **167 min** (buffer **133**). With only two stops
-   20.96 m apart (about one 20 m DTM cell), dropping one saves little distance
-   (a 21 m leg) though it still saves that stop's 60 min dwell - a farther
-   third stop (shortlist under review, not chosen yet) restores a real
-   distance-vs-science tradeoff.
-2. A +60 min overrun at the current stop makes the plan **227 min** - still
-   **FITS** the 300 min window (buffer 73), and the status bar shows walked /
-   science done / walk left / science left.
-3. Tightening the window or raising stop costs forces a drop; the UI names the
-   deferred station and the reason ("lowest-priority non-must-have"), and shows
-   the meters and ascent not walked.
+Every number, coordinate, elevation, image, caption, and label shown as DATA traces to a downloaded source; anything that cannot be sourced is shown as unavailable, never estimated. Scenario assumptions (pace, dwell, EVA window) are labeled as assumptions, not data. Exact sample-collection spots are unavailable from opened sources — the archived record supports the rover's last recorded position near a site, not proof of the exact spot. The globe is orientation only: no planet-wide routing or fine terrain is claimed.
 
-## Planner rules (src/lib/planner.js, pure functions, unit-tested)
+Full traceability — exact values, source URLs, retrieval dates, checksums, and verification suites — is in `src/data/PROVENANCE.md` and `scripts/`.
 
-- Traverse time = horizontal straight-line distance between waypoints /
-  declared pace. Distances are geometric (waypoint-derived), not
-  terrain-following 3D surface lengths and not a surveyed or driven path.
-- Each kept stop costs its declared dwell time.
-- A visited stop is done: it is never dropped; only remaining stops are
-  re-planned. Its walk minutes and the pace used are frozen when the leg
-  completes - moving the pace slider later changes only legs not yet walked
-  (covered by a Vitest case). A visited entry without a recorded walk time
-  falls back to the current pace.
-- If the plan exceeds the remaining window, drop the **lowest-priority
-  non-must-have** stop first, then re-check; the UI names the dropped station
-  and the reason.
-- If only must-have stops remain and they still cannot fit, report the
-  shortfall explicitly and drop nothing silently (covered by a Vitest case).
-- Zero-window edge case degrades gracefully (covered by a Vitest case).
-- Visit order is the shortest-time permutation of the kept stops; ties break
-  deterministically toward the priority-sorted order. Drops are deterministic
-  too: among equal-priority droppable stops, the earlier one in the
-  priority-sorted list drops first (stable sort).
+## Radiation environment (per station)
 
-## Data integrity (audit 2026-11-13)
+Radiation shows in the **Endpoint details** panel on the right rail (`src/components/RoutePointDetails.jsx`, "Radiation environment" section). It reads per-station radiation data from `src/data/stations.json` — each station carries `radiationUsGyPerDay`, `radiationType`, and `radiationNote`.
 
-Every number, coordinate, elevation, image, caption and label shown as DATA
-traces to a downloaded source; anything that cannot be sourced is shown as
-unavailable, never estimated. Full details, exact values, source URLs,
-retrieval dates, checksums and the verification suites are in
-`src/data/PROVENANCE.md`.
+- Gale Crater stations (Rocknest, Shaler, drill sites, Departure): surface dose rates measured by the RAD instrument on Curiosity - absorbed dose ~0.21 mGy/day (210 µGy/day), labeled "measured" per Hassler et al., Science 343, 1244797 (2014).
+- Jezero stations (Wildcat Ridge, Skinner Ridge, Shuyak, Mageik): ~180 µGy/day, labeled "estimated" from Mars surface radiation models and orbital data — no direct Jezero surface RAD measurement exists.
+- Three Forks depot and Kukaklek: "No surface data" — nothing estimated.
+- Scope: surface dose context only. Not used by the route planner, does not change leg time or cost. Galactic cosmic rays only; solar energetic particle events not included.
+- A displayed level chip (Low / Moderate / High) is derived from the µGy/day value in the UI, not from the source paper.
 
-- Terrain heights, ascents, 3D mesh: USGS Mars 2020 TRN CTX DTM (20 m grid).
-- Map/3D textures: USGS CTX orthomosaic (6 m).
-- Geology units and overlay: USGS SIM 3464 geodatabase (point-in-polygon).
-- Stop coordinates: rover drive records in archived NASA M20 waypoints
-  snapshots (sols 654 / 502 / 477) - the rover's **last recorded position
-  near** the Three Forks depot / Hazeltop-Bearwallow / Swift Run-Skyland
-  sample locations. Exact sample-collection spots are **unavailable** from
-  opened sources: the archived feed shows no intervening drive records, which
-  is evidence for the last recorded position, not proof of the exact spot.
-- Photos: NASA Mars 2020 raw-image archive (sols 502 / 477, Mastcam-Z left
-  110 mm per the ASU filename decoder); NASA metadata confirms sol and camera,
-  it does not identify the feature shown.
-- Kodiak candidate viewpoint: **removed** (2026-11-13). No numeric coordinate
-  exists in any opened source; the earlier approximate coordinate contradicted
-  published descriptions. All Kodiak data, imagery and UI were removed rather
-  than kept as an estimate.
-
-Scenario assumptions (EVA window, pace, dwell, stop costs, priorities) are
-declared in the UI and labeled as assumptions, not data. None of the geometry
-is a human-safety or walkability assessment.
+Any dose for a given stay time (for example, hours on the surface) is our own constant-rate arithmetic, not in the paper, and is labeled as such.
 
 ## Verification
 
@@ -93,3 +50,20 @@ python3 scripts/test_provenance.py   # source/data checks against the raw files
 node scripts/check_ui_outputs.mjs    # rendered-DOM checks vs served data
 npx vitest run                       # planner arithmetic
 ```
+
+## Roadmap (coming next)
+
+These are planned, not yet shipped:
+
+- **Live data:** live updates to stations and events as new rover data arrives.
+- **UI polish:** improved visuals and interaction across all views.
+- **More rovers and landing sites** added to the map.
+- **Martian calendar** improvements for event dates.
+
+## Limitations (not a safety assessment)
+
+Not a human-safety or walkability assessment. Synthetic connectors are not recorded ground; the depot is an area, not a surveyed point; context-only events carry no exact pins; coarse global elevation (~12.8 km/px) is not terrain-aware pathfinding.
+
+## Tech stack
+
+React 19 + Vite, Three.js / @react-three-fiber / drei (3D), Leaflet / react-leaflet / proj4 (2D map), geotiff, vitest.

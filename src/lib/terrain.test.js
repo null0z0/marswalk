@@ -5,7 +5,8 @@
 // method and data as the preset scenarios - not a new, untested source.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createGrid, containsLatLon, nearestH, bilinearH, profileLeg, slopeRange, legMetricsFromGrid, createRuntimeLegs, toM, toLatLon } from './terrain.js';
+import { createGrid, createGridFromBin, containsLatLon, nearestH, bilinearH, profileLeg, slopeRange, slopeRangeProfile, legMetricsFromGrid, createRuntimeLegs, toM, toLatLon } from './terrain.js';
+import { compareRoutes } from './inspect.js';
 
 const hm = JSON.parse(readFileSync('public/data/heightmap.json', 'utf8'));
 const legsJson = JSON.parse(readFileSync('public/data/legs.json', 'utf8'));
@@ -230,5 +231,66 @@ describe('runtime legs with route models', () => {
     const meta = legs.legsMeta['A|B'];
     expect(meta.routeModel).toBe('leastcost');
     expect(Array.isArray(meta.pathLatLon) && meta.pathLatLon.length > 2).toBe(true);
+  });
+});
+
+describe('shipped Jezero 4 m DTM binary grid', () => {
+  const meta = JSON.parse(readFileSync('public/data/heightmap_jezero_4m.json', 'utf8'));
+  const buf = readFileSync('public/data/heightmap_jezero_4m.bin');
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  const hi = createGridFromBin(meta, ab);
+
+  it('loads with the declared shape, fully populated inside the app window', () => {
+    expect(hi.nx).toBe(meta.nx);
+    expect(hi.ny).toBe(meta.ny);
+    expect(hi.dx).toBe(4);
+    let bad = 0;
+    for (let j = 0; j < hi.ny; j++) for (let i = 0; i < hi.nx; i++) if (!Number.isFinite(hi.values[j][i])) bad++;
+    expect(bad).toBe(0);
+  });
+
+  it('reproduces the source DTM at the six stations and stays near the 20 m grid', () => {
+    // nearest-pixel values read from the source GeoTIFF at build time (rasterio)
+    const expected = {
+      Depot: -2546.23, Wildcat: -2524.36, Skinner: -2522.37,
+      Kukaklek: -2524.07, Shuyak: -2526.63, Mageik: -2517.67,
+    };
+    for (const s of stations) {
+      if (!(s.id in expected)) continue;
+      const [mx, my] = toM(s.lon, s.lat);
+      const h = bilinearH(hi, mx, my);
+      expect(h).not.toBe(null);
+      expect(Math.abs(h - expected[s.id])).toBeLessThan(2.0);   // bilinear vs nearest-pixel slack
+      const hc = bilinearH(grid, mx, my);
+      expect(Math.abs(h - hc)).toBeLessThan(10);                 // same datum: differences are resolution, not offset
+    }
+  });
+});
+
+describe('planner/comparison slope consistency (QA alignment)', () => {
+  const pts = id => byId[id];
+  it('legsMeta slope equals the shared profile sampler on the same leg', () => {
+    const rl = createRuntimeLegs(grid, pts, { shippedMeta: legsJson.legsMeta });
+    const prof = rl.legs['Kukaklek|Wildcat'];
+    const meta = rl.legsMeta['Kukaklek|Wildcat'];
+    expect(meta.slope20_deg).toEqual(slopeRangeProfile(prof, 20));
+  });
+  it('least-cost legsMeta slope is computed along the A* path, not the straight segment', () => {
+    const rl = createRuntimeLegs(grid, pts, { routeModel: 'leastcost' });
+    const meta = rl.legsMeta['Kukaklek|Wildcat'];
+    expect(meta.pathLatLon).toBeTruthy();
+    const prof = rl.legs['Kukaklek|Wildcat'];
+    expect(meta.slope20_deg).toEqual(slopeRangeProfile(prof, 20));
+    // and it differs from the straight-segment statistic it used to report
+    const [ax, ay] = [byId.Kukaklek, byId.Wildcat];
+    const straight = slopeRange(grid, ax, ay, Math.hypot(...(() => { const a = toM(ax.lon, ax.lat), b = toM(ay.lon, ay.lat); return [b[0] - a[0], b[1] - a[1]]; })()));
+    expect(meta.slope20_deg).not.toEqual(straight);
+  });
+  it('comparison and planner report identical slope for the same endpoints and model', () => {
+    const r = compareRoutes(grid, byId.Kukaklek, byId.Wildcat);
+    const rl = createRuntimeLegs(grid, pts, { routeModel: 'leastcost' });
+    expect(rl.legsMeta['Kukaklek|Wildcat'].slope20_deg).toEqual(r.leastCost.slope);
+    const rs = createRuntimeLegs(grid, pts, {});
+    expect(rs.legsMeta['Kukaklek|Wildcat'].slope20_deg).toEqual(r.straight.slope);
   });
 });
