@@ -2253,9 +2253,9 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  border: 1px solid rgba(148, 197, 255, 0.28);
+  border: 1px solid rgba(148, 197, 255, 0.45);
   border-radius: 6px;
-  background: rgba(5, 10, 18, 0.88);
+  background: rgba(5, 10, 18, 0.92);
   color: #eef6ff;
   font-family: var(--font-mono);
   font-size: 11px;

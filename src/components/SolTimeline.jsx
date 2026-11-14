@@ -66,13 +66,20 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
           });
         })()}
       </svg>
-      <div className="text-[9px] text-gray-500 mt-0.5">
-        {range.kind === 'positions'
-          ? `Archive sols ${range.lo}-${range.hi}: map shows recorded rover positions up to sol ${N} (${roverTrack.route.filter(p => p[2] <= N).length} of ${roverTrack.route.length} records). Sparse records connected by straight lines - the driven path between records is not in this dataset.`
-          : `Archive sols ${range.lo}-${range.hi}: map shows recorded site stops reached by sol ${N}. Drive polylines in this archive carry no per-segment sol record, so they stay drawn; between stop records the exact whereabouts are not in this dataset.`}
-        {' '}Stop dots are waypoint-record sols. This filters the recorded archive only - the walk plan is unchanged.
-        {solLimit != null && <button onClick={() => setSolLimit(null)} className="ml-1 text-cyan-400 underline">reset (full archive)</button>}
-      </div>
+      {solLimit != null && (
+        <div className="text-[9px] mt-0.5">
+          <button onClick={() => setSolLimit(null)} className="text-cyan-400 underline">reset (full archive)</button>
+        </div>
+      )}
+      <details className="mt-0.5">
+        <summary className="cursor-pointer text-gray-500 text-[9px] select-none">what this filters</summary>
+        <div className="text-[9px] text-gray-500 pt-0.5 leading-snug">
+          {range.kind === 'positions'
+            ? `Archive sols ${range.lo}-${range.hi}: map shows recorded rover positions up to sol ${N} (${roverTrack.route.filter(p => p[2] <= N).length} of ${roverTrack.route.length} records). Sparse records connected by straight lines - the driven path between records is not in this dataset.`
+            : `Archive sols ${range.lo}-${range.hi}: map shows recorded site stops reached by sol ${N}. Drive polylines in this archive carry no per-segment sol record, so they stay drawn; between stop records the exact whereabouts are not in this dataset.`}
+          {' '}Stop dots are waypoint-record sols. This filters the recorded archive only - the walk plan is unchanged.
+        </div>
+      </details>
     </div>
   );
 }

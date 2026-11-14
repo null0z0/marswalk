@@ -1,8 +1,9 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceDot, ResponsiveContainer } from 'recharts';
+import { geologyAlongPath } from '../lib/inspect.js';
 import stationsData from '../data/stations.json';
 const SHORT = Object.fromEntries(stationsData.map(x => [x.id, x.short || (x.id === 'Depot' ? 'Base' : x.name.split(' ')[0])]));
 
-export default function ElevationProfile({ plan, stations, legsData }) {
+export default function ElevationProfile({ plan, stations, legsData, geojson = null }) {
   const data = [];
   const baseId = plan.baseId || 'Depot';
   const stationMarks = [{ d: 0, e: null, id: baseId }];
@@ -16,7 +17,10 @@ export default function ElevationProfile({ plan, stations, legsData }) {
   stationMarks[0].e = data.length ? data[0].e : 0;
   const totalDist = off;
 
-  // Data-driven geology strip + slope ranges from legs.json legsMeta (SIM 3464 polygons, 20 m DTM).
+  // Data-driven geology strip + slope ranges from the runtime legs provider.
+  // When the least-cost model routed a leg, its meta carries pathLatLon and
+  // the strip is computed along that actual polyline at runtime (SIM 3464
+  // point-in-polygon) - never the straight segment the chart is not showing.
   const meta = legsData && legsData.legsMeta ? legsData.legsMeta : {};
   const UNIT_STYLE = {
     Njf: { cls: 'bg-sky-950/70 text-sky-300', label: 'Njf (Jezero floor unit)' },
@@ -36,14 +40,21 @@ export default function ElevationProfile({ plan, stations, legsData }) {
     if (m && slopeKey && m[slopeKey] && dist >= base) {
       // slopes are stored for the stored leg direction; negate+swap when traversed in reverse
       const sr = rev ? [-m[slopeKey][1], -m[slopeKey][0]] : m[slopeKey];
-      legSlopeNotes.push(`${nm(leg.from)} → ${nm(leg.to)}: ${sr[0].toFixed(1)}° to ${sr[1].toFixed(1)}° (${base} m baseline, bilinear)`);
+      legSlopeNotes.push(`${nm(leg.from)} → ${nm(leg.to)}: ${sr[0].toFixed(1)}° to ${sr[1].toFixed(1)}° (${base} m window along the profile)`);
     }
-    if (m && m.geology) {
+    if (!rev && m && m.pathLatLon && geojson) {
+      // least-cost geometry: runtime point-in-polygon along the actual path
+      const g = geologyAlongPath(geojson, m.pathLatLon);
+      // symbol null = outside every mapped polygon: leave a gap, never fill
+      if (g) for (const s of g.segments) if (s[2] != null) segs.push({ start: goff + s[0], end: goff + s[1], symbol: s[2], name: s[3] });
+    } else if (m && m.geology && !m.pathLatLon) {
       const g = rev
         ? m.geology.map(s => [dist - s[1], dist - s[0], s[2], s[3]]).reverse()
         : m.geology;
       for (const s of g) segs.push({ start: goff + s[0], end: goff + s[1], symbol: s[2], name: s[3] });
     }
+    // when pathLatLon exists but geojson is unavailable the leg contributes
+    // no strip segment - an honest gap, not the wrong geometry
     goff += dist;
   }
   const merged = [];
@@ -114,7 +125,7 @@ export default function ElevationProfile({ plan, stations, legsData }) {
       )}
 
       <div className="mt-1.5 text-[9px] text-gray-500 break-all">
-        Precomputed straight-segment samples from the {legsData && legsData.dtm ? legsData.dtm : 'elevation grid'}; slopes are grid-baseline bilinear estimates and the grid smooths micro-relief.{merged.length > 0 ? ' Mapped unit contacts are regional-map boundaries (SIM 3464), not scarp markers.' : ''} Not a surveyed walking path.
+        {legsData && legsData.dtm ? legsData.dtm : 'elevation grid'}; slopes use a sliding one-posting window along each leg's sampled profile and the grid smooths micro-relief.{merged.length > 0 ? ' Mapped unit contacts are regional-map boundaries (SIM 3464), not scarp markers.' : ''} Not a surveyed walking path.
       </div>
     </div>
   );

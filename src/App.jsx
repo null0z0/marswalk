@@ -8,14 +8,18 @@ import StationPanel from './components/StationPanel.jsx';
 import TimeControl from './components/TimeControl.jsx';
 import PlanSummary from './components/PlanSummary.jsx';
 import SolTimeline from './components/SolTimeline.jsx';
+import HistoricalEvents from './components/HistoricalEvents.jsx';
 import ElevationProfile from './components/ElevationProfile.jsx';
 import MissionBrief from './components/MissionBrief.jsx';
 import GlobalView from './components/GlobalView.jsx';
+import RouteCompare from './components/RouteCompare.jsx';
+import PointInspector from './components/PointInspector.jsx';
 import DemoCoach from './components/DemoCoach.jsx';
 import { MapIcon, TerrainIcon, ResetIcon, OrbitSmallIcon } from './components/Icons.jsx';
 import { buildPlan, legMetrics } from './lib/planner.js';
 import { buildTraverseGraph, traversePath, SNAP_TOLERANCE_M } from './lib/traverse.js';
-import { createGrid, createRuntimeLegs, containsLatLon } from './lib/terrain.js';
+import { createGrid, createGridFromBin, createRuntimeLegs, containsLatLon } from './lib/terrain.js';
+import { compareRoutes, geologyAlongPath } from './lib/inspect.js';
 import stations from './data/stations.json';
 import scenarios from './data/scenarios.json';
 
@@ -39,6 +43,7 @@ export default function App() {
   const stored = useMemo(loadStored, []);
   const [legsData, setLegsData] = useState(null);       // shipped legs.json (geology meta + fallback)
   const [hmData, setHmData] = useState(null);           // elevation grid for the runtime engine
+  const [hiHm, setHiHm] = useState(null);               // Jezero-only 4 m DTM (binary) for profiles/inspector
   const [geojson, setGeojson] = useState(null);
   const [roverTrack, setRoverTrack] = useState(null);
   const [terrainMeta, setTerrainMeta] = useState(null);
@@ -73,11 +78,18 @@ export default function App() {
   // mission planner is preserved as a secondary mode the user opens explicitly.
   const [appMode, setAppMode] = useState('route');
   const [waypointError, setWaypointError] = useState(null);
+  // Route comparison: show the straight geometric baseline and the
+  // slope-aware least-cost path for the same two endpoints, side by side.
+  // Neither is labeled shortest/easiest/safe.
+  const [compareOn, setCompareOn] = useState(stored?.compareOn ?? true);
+  // Arbitrary-point inspector: click the map, read what the data says there.
+  const [inspectMode, setInspectMode] = useState(false);
+  const [inspectPt, setInspectPt] = useState(null);
   const [layers, setLayers] = useState({
     geology: true, roverRoute: false, roverStops: false,
     elevRamp: false, hillshade: false, slope: false, contours: false, crismVna: false, overlayOpacity: 0.55,
     // Per feature-type visibility (user request: each type independent, shapes not color alone)
-    plannedRoute: true, droppedLegs: true, objectives: true, baseMarker: true, userWps: true,
+    plannedRoute: true, droppedLegs: true, objectives: true, baseMarker: true, userWps: true, events: true,
   });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -114,6 +126,17 @@ export default function App() {
     // previous region's data for one render
     fetch(`/data/legs${sfx}.json`).then(r => r.json()).then(d => setLegsData({ region, payload: d }));
     fetch(`/data/heightmap${sfx}.json`).then(r => r.json()).then(d => setHmData({ region, payload: d }));
+    setHiHm(null);
+    if (region === 'jezero') {
+      // Verified 4 m USGS DTM (same MOLA-DeltaGeoid product family as the
+      // 20 m grid by file naming, numerically close; neither GeoTIFF carries
+      // an explicit vertical-datum tag, so this is a qualified match, not a
+      // documented one; 100% window coverage) - profiles + point inspector
+      // only; routing stays on the 20 m grid both routes share.
+      fetch('/data/heightmap_jezero_4m.json').then(r => r.ok ? r.json() : null)
+        .then(m => m ? fetch(m.bin).then(r => r.arrayBuffer()).then(buf => setHiHm({ region, meta: m, buf })) : null)
+        .catch(() => setHiHm(null));
+    }
     fetch(`/data/rover_track${sfx}.json`).then(r => r.json()).then(setRoverTrack);
     fetch(`/data/terrain_meta${sfx}.json`).then(r => r.ok ? r.json() : null).then(setTerrainMeta).catch(() => setTerrainMeta(null));
     fetch(sfx ? `/layers/gale/contours.geojson` : '/layers/contours.geojson').then(r => r.ok ? r.json() : null).then(setContours).catch(() => setContours(null));
@@ -142,15 +165,19 @@ export default function App() {
   const grid = useMemo(
     () => (hmData && hmData.region === region) ? createGrid(hmData.payload, GRID_SRC[region]) : null,
     [hmData, region]);
+  const hiGrid = useMemo(() => {
+    if (!hiHm || hiHm.region !== region) return null;
+    try { return createGridFromBin(hiHm.meta, hiHm.buf); } catch { return null; }
+  }, [hiHm, region]);
   const ptsOf = useMemo(() => {
     const map = Object.fromEntries(scenarioStations.filter(s => s.lat != null).map(s => [s.id, { lat: s.lat, lon: s.lon }]));
     return (id) => map[id] || null;
   }, [scenarioStations]);
   const activeLegs = useMemo(
     () => (grid && legsData && legsData.region === region)
-      ? createRuntimeLegs(grid, ptsOf, { shippedMeta: legsData.payload.legsMeta, routeModel, srcLabel: GRID_SRC[region] })
+      ? createRuntimeLegs(grid, ptsOf, { shippedMeta: legsData.payload.legsMeta, routeModel, srcLabel: GRID_SRC[region], hiGrid })
       : null,
-    [grid, legsData, region, ptsOf, routeModel]);
+    [grid, hiGrid, legsData, region, ptsOf, routeModel]);
 
   // Route mode lists REAL places only: declared scenario conveniences
   // (e.g. GaleBase, a hypothetical start at a recorded position) stay in the
@@ -166,6 +193,37 @@ export default function App() {
   const traverseGraph = useMemo(
     () => (region === 'gale' && roverTrack && roverTrack.segments) ? buildTraverseGraph(roverTrack) : null,
     [region, roverTrack]);
+
+  // Route comparison: both declared models for the same endpoints, computed
+  // on the shared elevation grid. Skipped while the recorded-traverse mode
+  // owns the route (historical geometry is neither grid model).
+  const abCompare = useMemo(() => {
+    if (!compareOn || appMode !== 'route' || followTraverse || !grid || !abFrom || !abTo || abFrom === abTo) return null;
+    const a = ptsOf(abFrom), b = ptsOf(abTo);
+    if (!a || !b) return null;
+    return compareRoutes(grid, a, b, { srcLabel: GRID_SRC[region], hiGrid });
+  }, [compareOn, appMode, followTraverse, grid, hiGrid, abFrom, abTo, ptsOf, region]);
+  // Mapped geology along each compared route (Jezero SIM 3464 polygons only;
+  // Gale has no integrated polygon layer - the panel says so explicitly).
+  const abGeology = useMemo(() => {
+    if (region !== 'jezero' || !geojson || !abCompare) return null;
+    const a = ptsOf(abFrom), b = ptsOf(abTo);
+    if (!a || !b) return null;
+    return {
+      straight: abCompare.straight ? geologyAlongPath(geojson, [[a.lat, a.lon], [b.lat, b.lon]]) : null,
+      leastCost: abCompare.leastCost ? geologyAlongPath(geojson, abCompare.leastCost.pathLatLon) : null,
+    };
+  }, [region, geojson, abCompare, abFrom, abTo, ptsOf]);
+  // Same geometry handed to the 2D map and the 3D terrain so both views draw
+  // exactly what the comparison table reports.
+  const abCompareGeom = useMemo(() => {
+    if (!abCompare) return null;
+    const a = ptsOf(abFrom), b = ptsOf(abTo);
+    return {
+      straight: abCompare.straight && a && b ? [[a.lat, a.lon], [b.lat, b.lon]] : null,
+      leastCost: abCompare.leastCost ? abCompare.leastCost.pathLatLon : null,
+    };
+  }, [abCompare, abFrom, abTo, ptsOf]);
   const traverseResult = useMemo(() => {
     if (!followTraverse || !traverseGraph || !abFrom || !abTo || abFrom === abTo) return null;
     const a = ptsOf(abFrom), b = ptsOf(abTo);
@@ -194,10 +252,13 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
-        scenarioId, priorities, mustHaves, windowMin, dwellMin, paceKmh, roundTrip, baseOverride, customPts,
+        scenarioId, priorities, mustHaves, windowMin, dwellMin, paceKmh, roundTrip, baseOverride, customPts, compareOn,
       }));
     } catch { /* storage full/blocked: plan still works for the session */ }
-  }, [scenarioId, priorities, mustHaves, windowMin, dwellMin, paceKmh, roundTrip, baseOverride, customPts]);
+  }, [scenarioId, priorities, mustHaves, windowMin, dwellMin, paceKmh, roundTrip, baseOverride, customPts, compareOn]);
+
+  const toggleAddMode = () => { setAddMode(a => !a); setWaypointError(null); setInspectMode(false); };
+  const toggleInspectMode = () => { setInspectMode(v => !v); setAddMode(false); setWaypointError(null); };
 
   if (!legsData || legsData.region !== region || !hmData || hmData.region !== region || !activeLegs) {
     return (
@@ -383,12 +444,17 @@ export default function App() {
               {Object.entries(scenarios).map(([id, sc]) => <option key={id} value={id} disabled={!!sc.disabled}>{sc.label}{sc.disabled ? ' (in build)' : ''}</option>)}
             </select>
             <div className="text-[10px] text-gray-400 leading-snug mt-1">{scenario.blurb}</div>
-            <div className="text-[9px] text-gray-500 leading-snug border border-gray-800 rounded p-1.5 bg-[#0d1420]/60 mt-1">
-              Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
-            </div>
+            <details className="mt-1">
+              <summary className="cursor-pointer text-gray-500 text-[9px] select-none">coverage & data limits</summary>
+              <div className="text-[9px] text-gray-500 leading-snug pt-1">
+                Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
+              </div>
+            </details>
           </section>
 
           <SolTimeline stations={scenarioStations} region={region} roverTrack={roverTrack} solLimit={solLimit} setSolLimit={setSolLimit} />
+
+          <HistoricalEvents region={region} />
 
           <StationPanel appMode={appMode} stations={appMode === 'route' ? realPlaces : scenarioStations} baseId={baseId} priorities={priorities}
             setPriority={(id, v) => setPriorities(p => ({ ...p, [id]: v }))}
@@ -403,7 +469,7 @@ export default function App() {
           <section className="panel">
             <div className="eyebrow">Your waypoints</div>
             <div className="text-[10px] text-gray-400 mb-1">Coordinates only - no science objective is invented for them. They are navigation points: always kept on the route.</div>
-            <button onClick={() => { setAddMode(a => !a); setWaypointError(null); }}
+            <button onClick={toggleAddMode}
               className={`w-full px-2 py-1 rounded text-[11px] font-bold ${addMode ? 'bg-cyan-700 text-white' : 'bg-[#101826] border border-cyan-900 text-cyan-300'}`}>
               {addMode ? 'Click the map to place it… (cancel)' : '+ Add waypoint on map'}
             </button>
@@ -424,9 +490,11 @@ export default function App() {
                 layers={layers} setLayers={setLayers} region={region} baseId={baseId} solLimit={solLimit}
                 addMode={addMode} onMapClick={(lat, lon) => addWaypoint(lat, lon)}
                 onMoveWaypoint={moveWaypoint}
+                inspectMode={inspectMode} inspectPt={inspectPt} onInspect={(lat, lon) => setInspectPt({ lat, lon })}
                 legsProvider={activeLegs} routeModel={routeModel} setRouteModel={setRouteModel} abLeg={abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) ? [abFrom, abTo] : null}
                 abGeometry={traverseResult && traverseResult.ok ? traverseResult.pathLatLon : null}
                 abGeometryParts={traverseResult && traverseResult.ok ? traverseResult.pathParts : null}
+                abCompareGeom={appMode === 'route' ? abCompareGeom : null}
                 showPlan={appMode === 'planner'} />
             </div>
 
@@ -437,12 +505,19 @@ export default function App() {
                 inert={viewMode === '3d' ? undefined : true}
               >
                 <Suspense fallback={<div className="terrain-loading">Loading 3D terrain…</div>}>
-                  <Terrain3D
+                  {/* key={region}: a region change tears down and rebuilds the
+                      whole 3D scene instead of reconciling two different
+                      regions' stations/labels/lines inside one Canvas - the
+                      in-place swap crashed React's commit (NotFoundError
+                      removeChild in a drei Html portal) on the second cycle. */}
+                  <Terrain3D key={region}
                     stations={appMode === 'route'
                       ? (realPlaces.filter(x => x.id === abFrom || x.id === abTo).length ? realPlaces.filter(x => x.id === abFrom || x.id === abTo) : realPlaces)
                       : scenarioStations}
                     plan={plan} region={region} baseId={baseId}
-                    mode={appMode === 'route' ? 'route' : 'planner'} abPath={abPath3D} abParts={abParts3D} />
+                    mode={appMode === 'route' ? 'route' : 'planner'} abPath={abPath3D} abParts={abParts3D}
+                    abCompare={appMode === 'route' ? abCompareGeom : null}
+                    legsProvider={appMode === 'planner' ? activeLegs : null} />
                 </Suspense>
               </div>
             )}
@@ -568,7 +643,33 @@ export default function App() {
                   </div>
                 : <div className="text-[11px] text-amber-400">No route: one of these points is outside the elevation data coverage, or the ground in between has no data. We do not guess a path.</div>
             )}
+            {!followTraverse && (
+              <label className="flex items-start gap-1.5 text-[10px] text-gray-400">
+                <input type="checkbox" className="mt-0.5" checked={compareOn} onChange={e => setCompareOn(e.target.checked)} />
+                <span>Compare both route models: straight baseline vs slope-aware least-cost path between the same endpoints, with profiles and mapped geology. Neither is the shortest, easiest or safest route.</span>
+              </label>)}
+            {followTraverse && (
+              <div className="text-[9px] text-gray-500">Grid-model comparison is off while following the recorded drive path - the record is historical geometry, not one of the two grid models, and the models are never drawn as a substitute for a refused record.</div>)}
           </section>
+
+          {appMode === 'route' && compareOn && abCompare && !followTraverse && (
+            <RouteCompare compare={abCompare} geology={abGeology} region={region} paceKmh={paceKmh}
+              fromName={(realPlaces.find(x => x.id === abFrom) || {}).short || abFrom}
+              toName={(realPlaces.find(x => x.id === abTo) || {}).short || abTo} />
+          )}
+
+          <section className="panel text-xs space-y-1.5">
+            <div className="eyebrow">Inspect any point</div>
+            <div className="text-[10px] text-gray-500">Click the map to read what the data actually says at that point: elevation, local slope, mapped geology (Jezero), nearest places and nearest recorded rover evidence. Missing layers are stated as unavailable, never filled in.</div>
+            <button onClick={toggleInspectMode}
+              className={`w-full px-2 py-1 rounded text-[11px] font-bold ${inspectMode ? 'bg-cyan-700 text-white' : 'bg-[#101826] border border-cyan-900 text-cyan-300'}`}>
+              {inspectMode ? 'Click the map to inspect… (cancel)' : 'Inspect a point on the map'}
+            </button>
+          </section>
+          {inspectPt && (
+            <PointInspector pt={inspectPt} grid={grid} hiGrid={hiGrid} geojson={geojson} region={region}
+              stations={realPlaces} roverTrack={roverTrack} onClear={() => setInspectPt(null)} />
+          )}
 
           {appMode === 'planner' && <section className="panel text-xs space-y-1.5">
             <div className="eyebrow">Route options</div>
@@ -589,7 +690,7 @@ export default function App() {
 
           {appMode === 'planner' && <PlanSummary plan={plan} windowMin={windowMin} dwellMin={dwellMin} paceKmh={paceKmh} dtmNote={legs.dtm} routeModel={routeModel}
                 planA={planA} onPinA={pinPlanA} onClearA={() => setPlanA(null)} />}
-          {appMode === 'planner' && <ElevationProfile plan={plan} stations={scenarioStations} legsData={legs} />}
+          {appMode === 'planner' && <ElevationProfile plan={plan} stations={scenarioStations} legsData={legs} geojson={region === 'jezero' ? geojson : null} />}
         </div>
       </div>
 

@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
+    "fdir": "^6.5.0",
     "geotiff": "^3.0.5",
     "leaflet": "^1.9.4",
     "proj4": "^2.23.0",

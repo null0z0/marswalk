@@ -6,7 +6,38 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { greatCircleProfile } from '../lib/globalelev.js';
 import * as THREE from 'three';
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { OrbitControls, Html, Line } from '@react-three/drei';
+import eventsData from '../data/historicalEvents.json';
+
+// Recorded-natural-event archive on the globe (user-approved): point markers
+// ONLY at verified coordinates, ring markers at official Gazetteer region
+// centers for region-level records - a ring is never an event position.
+const EV_COLOR = '#fbbf24';
+function evSvg(kind, size = 14) {
+  const s2 = size / 2;
+  const inner = kind === 'region'
+    ? `<circle cx="${s2}" cy="${s2}" r="${s2 - 2}" fill="none" stroke="${EV_COLOR}" stroke-width="1.6" stroke-dasharray="3 2"/>`
+    : `<polygon points="${s2},1 ${s2 + 2.6},${s2 - 2.2} ${size - 1},${s2 - 2.2} ${s2 + 3.8},${s2 + 0.9} ${s2 + 5.4},${size - 1.5} ${s2},${s2 + 3.2} ${s2 - 5.4},${size - 1.5} ${s2 - 3.8},${s2 + 0.9} 1,${s2 - 2.2} ${s2 - 2.6},${s2 - 2.2}" fill="${EV_COLOR}" fill-opacity="0.9" stroke="#0b0f16" stroke-width="1"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+// Short place labels for the events list (UI labels only; positions come from
+// the verified marker records).
+const EV_PLACE = {
+  'evm-insight': 'InSight lander site',
+  'evm-amazonis-impact': 'Amazonis Planitia impact crater',
+  'evm-polar-avalanches': 'North polar scarp',
+  'evm-jezero-region': 'Jezero Crater',
+  'evm-gale-region': 'Gale Crater',
+};
+
+const TYPE_LABEL = {
+  dust_storm_regional: 'Regional dust storm',
+  dust_storm_global: 'Planet-encircling dust event',
+  dust_devil: 'Dust devil',
+  marsquake: 'Marsquake',
+  meteoroid_impact: 'Meteoroid impact',
+  avalanche: 'Polar avalanche (CO2/dust fall)',
+};
 
 // site_type -> distinct shape AND color (user requirement: shape varies, not color alone)
 const TYPE_STYLE = {
@@ -98,6 +129,31 @@ function LabelLayout({ features, view, setVisibleKeys, excludeRects }) {
   return null;
 }
 
+// Camera auto-fit for the distance arc: frame both endpoints. Antipodal pairs
+// cannot share one view; then only the distance is adjusted.
+function CameraFit({ fit }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    if (!fit) return;
+    const d = fit.dir ? new THREE.Vector3(...fit.dir) : camera.position.clone().normalize();
+    camera.position.copy(d.multiplyScalar(fit.dist));
+    camera.lookAt(0, 0, 0);
+  }, [fit]);
+  return null;
+}
+
+// Soft fill that follows the camera so the side being looked at stays
+// readable; the fixed key light and its terminator are untouched.
+function CameraFill() {
+  const { camera } = useThree();
+  const light = useMemo(() => new THREE.DirectionalLight(0xffffff, 0.55), []);
+  useFrame(() => { light.position.copy(camera.position); });
+  return <primitive object={light} />;
+}
+
+const ARC_FROM = [0.13, 0.83, 0.93]; // cyan, matches "from" ring
+const ARC_TO = [0.64, 0.90, 0.23];   // lime, matches "to" ring
+
 function ZoomTracker({ setView }) {
   const { camera } = useThree();
   useFrame(() => setView(v => {
@@ -117,9 +173,16 @@ export default function GlobalView({ onOpenRegion }) {
   const [nom, setNom] = useState(null);
   const [demFrom, setDemFrom] = useState('');
   const [demTo, setDemTo] = useState('');
+  const [evCatalog, setEvCatalog] = useState(null);
+  const [selectedEv, setSelectedEv] = useState(null);
+  const [selectedEvId, setSelectedEvId] = useState(null);
+  const [evDetailOpen, setEvDetailOpen] = useState(false);
+  const [showEvents, setShowEvents] = useState(true);
   const [demBusy, setDemBusy] = useState(false);
   const [demResult, setDemResult] = useState(null);
   const [demError, setDemError] = useState(null);
+  const [fit, setFit] = useState(null);
+  const [spin, setSpin] = useState(() => !(typeof location !== 'undefined' && location.hash.includes('globelon')));
   const [view, setView] = useState({ dist: 3.0, dir: [0, 0.35, 0.94] });
   const [visibleKeys, setVisibleKeys] = useState({ sig: '', keys: new Set() });
   const bannerRef = useRef(null);
@@ -129,6 +192,7 @@ export default function GlobalView({ onOpenRegion }) {
   const globeRef = useRef();
   useEffect(() => {
     fetch('/data/mission_sites.json').then(r => r.json()).then(setCatalog).catch(() => setCatalog(null));
+    fetch('/data/event_markers.json').then(r => r.json()).then(setEvCatalog).catch(() => setEvCatalog(null));
     fetch('/data/mars_nomenclature.json').then(r => r.json()).then(d => setNom(d.features)).catch(() => setNom(null));
   }, []);
   const minDiam = ZOOM_TIERS.find(([d]) => view.dist >= d)[1];
@@ -142,6 +206,32 @@ export default function GlobalView({ onOpenRegion }) {
     ...s, st: TYPE_STYLE[s.site_type] || { color: '#ffffff', label: s.site_type, shape: 'circle' },
     pos: latLonToVec3(s.lat, s.lon, R * 1.005),
   })) : []), [catalog]);
+  const evMarkers = useMemo(() => (evCatalog ? evCatalog.markers.map(m => ({
+    ...m,
+    events: m.eventIds.map(id => eventsData.events.find(e => e.id === id)).filter(Boolean),
+    pos: latLonToVec3(m.lat, m.lon, R * 1.006),
+  })) : []), [evCatalog]);
+
+  // Distance arc between the two sampled sites: a lifted great-circle
+  // connector visualizing the SAME great-circle measurement the panel
+  // reports - not a route. Identical endpoints draw nothing (never invent
+  // geometry); the lift is visual only.
+  const arc = useMemo(() => {
+    if (!demResult || !catalog || !demFrom || !demTo) return null;
+    const a = catalog.sites.find(s => s.id === demFrom), b = catalog.sites.find(s => s.id === demTo);
+    if (!a || !b) return null;
+    const va = latLonToVec3(a.lat, a.lon, R), vb = latLonToVec3(b.lat, b.lon, R);
+    const theta = va.angleTo(vb);
+    if (theta < 1e-6) return null;
+    const N = 96;
+    const pts = [], colors = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      pts.push(va.clone().lerp(vb, t).normalize().multiplyScalar(R * 1.006 + 0.05 * Math.sin(Math.PI * t)));
+      colors.push([ARC_FROM[0] + (ARC_TO[0] - ARC_FROM[0]) * t, ARC_FROM[1] + (ARC_TO[1] - ARC_FROM[1]) * t, ARC_FROM[2] + (ARC_TO[2] - ARC_FROM[2]) * t]);
+    }
+    return { pts, colors, a, b, mid: pts[Math.floor(N / 2)] };
+  }, [demResult, demFrom, demTo, catalog]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -167,6 +257,7 @@ export default function GlobalView({ onOpenRegion }) {
         })(), fov: 42 }} style={{ background: '#05070c' }}>
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 2, 4]} intensity={1.1} />
+        <CameraFill />
         <MarsSphere globeRef={globeRef} />
         {markers.filter(s => s.pos.x * view.dir[0] + s.pos.y * view.dir[1] + s.pos.z * view.dir[2] > 0.02).map(s => (
           <Html key={s.id} position={s.pos} zIndexRange={[900, 0]}
@@ -176,6 +267,38 @@ export default function GlobalView({ onOpenRegion }) {
               dangerouslySetInnerHTML={{ __html: shapeSvg(s.st.shape, s.st.color) }} />
           </Html>
         ))}
+        {showEvents && evMarkers.filter(s => s.pos.x * view.dir[0] + s.pos.y * view.dir[1] + s.pos.z * view.dir[2] > 0.02).map(s => (
+          <Html key={s.id} position={s.pos} zIndexRange={[950, 0]}
+            style={{ pointerEvents: 'auto' }}>
+            <button type="button" aria-label={`recorded natural events: ${s.events.length}`} onClick={() => { setSelectedEv(s); setSelectedEvId(null); setEvDetailOpen(false); setSelected(null); }}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'translate(-50%,-50%)' }}
+              dangerouslySetInnerHTML={{ __html: evSvg(s.kind) }} />
+          </Html>
+        ))}
+        {arc && (
+          <Line points={arc.pts} vertexColors={arc.colors} lineWidth={2.5} transparent opacity={0.95} />
+        )}
+        {arc && [[arc.a, '#22d3ee', 'from'], [arc.b, '#a3e635', 'to']].map(([s, color, kind]) => {
+          const p = latLonToVec3(s.lat, s.lon, R * 1.007);
+          if (p.x * view.dir[0] + p.y * view.dir[1] + p.z * view.dir[2] <= 0.02) return null;
+          return (
+            <Html key={kind} position={p} zIndexRange={[960, 0]} style={{ pointerEvents: 'none' }} center>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transform: 'translateY(-6px)' }}>
+                <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke={color} strokeWidth="2"/><circle cx="9" cy="9" r="2.4" fill={color}/></svg>
+                <div style={{ color, background: 'rgba(13,20,32,0.9)', border: `1px solid ${color}`, borderRadius: 4, padding: '1px 5px', fontSize: 10, whiteSpace: 'nowrap' }}>{s.name.split(' - ')[0]}</div>
+              </div>
+            </Html>
+          );
+        })}
+        {arc && demResult && (arc.mid.x * view.dir[0] + arc.mid.y * view.dir[1] + arc.mid.z * view.dir[2] > 0.02) && (
+          <Html position={arc.mid} zIndexRange={[955, 0]} style={{ pointerEvents: 'none' }} center>
+            <div title="Great-circle measurement between the two sites - not a route"
+              style={{ background: 'rgba(13,20,32,0.92)', border: '1px solid #a3e635', color: '#d9f99d', borderRadius: 10, padding: '1px 8px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', transform: 'translateY(-14px)' }}>
+              {demResult.distKm} km
+            </div>
+          </Html>
+        )}
+        <CameraFit fit={fit} />
         <ZoomTracker setView={setView} />
         <LabelLayout features={candidates} view={view} setVisibleKeys={setVisibleKeys} excludeRects={excludeRects} />
         {labels.map(f => (
@@ -185,7 +308,7 @@ export default function GlobalView({ onOpenRegion }) {
           </Html>
         ))}
         <OrbitControls enablePan={false} minDistance={1.7} maxDistance={6}
-          autoRotate={!(typeof location !== 'undefined' && location.hash.includes('globelon'))} autoRotateSpeed={0.5} enableDamping dampingFactor={0.08} />
+          autoRotate={spin} autoRotateSpeed={0.5} enableDamping dampingFactor={0.08} />
       </Canvas>
 
       <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100% - 16px)' }}>
@@ -223,9 +346,24 @@ export default function GlobalView({ onOpenRegion }) {
               {v.label}
             </div>
           ))}
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 12, height: 12, display: 'inline-block' }}
+              dangerouslySetInnerHTML={{ __html: evSvg('point', 12) }} />
+            Recorded event (verified position)
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span style={{ width: 12, height: 12, display: 'inline-block' }}
+              dangerouslySetInnerHTML={{ __html: evSvg('region', 12) }} />
+            Region-level records (NOT positions)
+          </div>
         </div>
+        <label className="flex items-center gap-1.5 mt-1 cursor-pointer">
+          <input type="checkbox" checked={showEvents} onChange={e => setShowEvents(e.target.checked)} />
+          Show recorded natural events (historical archive - not current conditions)
+        </label>
         </>}
       </div>
+
 
       {selected && (
         <div style={{ position: 'absolute', top: 128, right: 8, zIndex: 1000, maxWidth: 300 }}
@@ -264,7 +402,24 @@ export default function GlobalView({ onOpenRegion }) {
               const a = catalog.sites.find(s => s.id === demFrom), b = catalog.sites.find(s => s.id === demTo);
               if (!a || !b) return;
               setDemBusy(true); setDemError(null); setDemResult(null);
-              try { const r = await greatCircleProfile(a.lat, a.lon, b.lat, b.lon); r.ok ? setDemResult(r) : setDemError(r.error || 'no data'); }
+              try {
+                const r = await greatCircleProfile(a.lat, a.lon, b.lat, b.lon);
+                if (r.ok) {
+                  setDemResult(r);
+                  // frame both endpoints: camera on the bisector, distance from
+                  // the angular separation so the whole arc is visible
+                  const va = latLonToVec3(a.lat, a.lon, 1), vb = latLonToVec3(b.lat, b.lon, 1);
+                  const theta = va.angleTo(vb);
+                  const mid = va.clone().add(vb);
+                  const dir = mid.length() > 0.1 ? mid.normalize() : null;
+                  // keep both endpoints inside the view cone (half-angle ~0.30
+                  // rad inside the 42 deg fov), not just on the visible limb
+                  const half = Math.min(theta / 2, 1.45);
+                  const dist = Math.min(5.8, Math.max(1.8, Math.cos(half) + Math.sin(half) / Math.tan(0.30)));
+                  setFit(dir ? { dir: [dir.x, dir.y, dir.z], dist } : { dir: null, dist });
+                  setSpin(false);
+                } else setDemError(r.error || 'no data');
+              }
               catch (e) { setDemError('fetch/decode failed: ' + (e && e.message ? e.message : 'network')); }
               setDemBusy(false);
             }}
@@ -289,7 +444,78 @@ export default function GlobalView({ onOpenRegion }) {
           </div>
         )}
       </div>
+
+      <div style={{ maxWidth: 330, flexShrink: 1, minHeight: 0, overflowY: 'auto' }}
+        className="bg-[#0d1420]/95 border border-amber-800 rounded p-2 text-[10px] text-gray-300">
+        <b className="text-amber-300">Recorded natural events - pick one to fly there.</b>
+        <div className="text-gray-500 mb-1">Verified historical records with their observation dates; Sol shown only when the mission documented it. Region-level records show the region, never a guessed point. Historical archive, not current conditions.</div>
+        {evMarkers.map(m => (
+          <div key={m.id} className="mt-1 pt-1 border-t border-gray-800">
+            <div className="text-gray-400">{EV_PLACE[m.id] || m.id}{m.kind === 'region' ? ' - region-level records' : ''}</div>
+            {m.events.map(e => (
+              <button key={e.id} type="button"
+                onClick={() => {
+                  setSelectedEv(m); setSelectedEvId(e.id); setEvDetailOpen(false); setSelected(null);
+                  const v = latLonToVec3(m.lat, m.lon, 1);
+                  setFit({ dir: [v.x, v.y, v.z], dist: 2.3 });
+                  setSpin(false);
+                }}
+                className="block w-full text-left text-gray-200 hover:text-amber-200 py-0.5">
+                {TYPE_LABEL[e.type] || e.type} - {e.sol != null ? `Sol ${e.sol} · ` : ''}{e.date_utc}
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
+      </div>
+      {selectedEv && (() => {
+        const e = selectedEv.events.find(x => x.id === selectedEvId) || selectedEv.events[0];
+        if (!e) return null;
+        const others = selectedEv.events.filter(x => x.id !== e.id);
+        return (
+          <div style={{ position: 'absolute', top: 180, right: 8, zIndex: 1000, maxWidth: 320, maxHeight: '62vh', overflowY: 'auto' }}
+            className="bg-[#0d1420] border border-amber-800 rounded p-2 text-[10px] text-gray-300">
+            <div className="flex items-start justify-between gap-2">
+              <b className="text-amber-300">{TYPE_LABEL[e.type] || e.type}</b>
+              <button type="button" aria-label="Close event info" onClick={() => setSelectedEv(null)}
+                className="text-gray-500 hover:text-gray-200">x</button>
+            </div>
+            <div className="text-gray-100">{e.sol != null ? `Sol ${e.sol} (${e.sol_mission || 'rover sol'}) · ` : ''}{e.date_utc} - {e.location}</div>
+            <div className="mt-0.5 text-amber-200/90">{selectedEv.anchorNote}</div>
+            <button type="button" onClick={() => setEvDetailOpen(o => !o)}
+              className="mt-1 text-cyan-400 hover:text-cyan-300 underline">
+              {evDetailOpen ? 'Hide details' : 'Details + source'}
+            </button>
+            {evDetailOpen && (
+              <div className="mt-1 pt-1 border-t border-gray-800">
+                {e.summary && <div>{e.summary}</div>}
+                {e.estimated_fields && e.estimated_fields.length > 0 && (
+                  <div className="mt-0.5 text-amber-200/80">Estimated/inferred (not measured): {e.estimated_fields.join('; ')}</div>
+                )}
+                {e.source_url && (
+                  <div className="mt-0.5">Source: <a href={e.source_url} target="_blank" rel="noreferrer"
+                    className="text-cyan-400 underline">{e.credit || e.source_url}</a></div>
+                )}
+                <div className="mt-1 text-gray-500">
+                  Historical record - not current conditions. Observation date is when it was detected; publication may be years later.
+                </div>
+              </div>
+            )}
+            {others.length > 0 && (
+              <div className="mt-1 pt-1 border-t border-gray-800 text-gray-500">
+                Also recorded here:
+                {others.map(o => (
+                  <button key={o.id} type="button" onClick={() => { setSelectedEvId(o.id); setEvDetailOpen(false); }}
+                    className="block w-full text-left text-gray-300 hover:text-amber-200 py-0.5">
+                    {TYPE_LABEL[o.type] || o.type} - {o.sol != null ? `Sol ${o.sol} · ` : ''}{o.date_utc}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div ref={buttonsRef} style={{ position: 'absolute', right: 10, bottom: 52, zIndex: 1000 }} className="global-actions flex flex-col gap-1.5">
         <button type="button" onClick={() => onOpenRegion && onOpenRegion('jezero')}
           className="bg-[#0d1420]/95 border border-lime-700 rounded px-2 py-1.5 text-[11px] text-lime-300 hover:bg-lime-950 text-left">

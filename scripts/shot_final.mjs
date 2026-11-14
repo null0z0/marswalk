@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
+await page.goto('http://localhost:4519', { waitUntil: 'networkidle' });
+await page.waitForSelector('text=Route between two points', { timeout: 30000 });
+await page.getByRole('button', { name: 'Mission planner' }).click();
+await page.waitForTimeout(1500);
+await page.locator('summary:has-text("Layers")').first().click();
+await page.waitForTimeout(400);
+await page.selectOption('select[aria-label="Route model"]', { label: 'Least-cost over terrain (slope-aware)' });
+await page.locator('summary:has-text("Layers")').first().click();
+await page.waitForTimeout(4000);
+await page.locator('text=Elevation profile (active route)').first().scrollIntoViewIfNeeded();
+await page.waitForTimeout(400);
+await page.screenshot({ path: '/downloads/shots/final_planner_lc_profile.png' });
+console.log('saved final_planner_lc_profile.png');
+await browser.close();

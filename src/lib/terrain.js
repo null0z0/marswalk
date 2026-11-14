@@ -35,6 +35,23 @@ export function toLatLon(mx, my) {
   return [lat, lon];
 }
 
+// Binary grid variant: meta json {nx, ny, dx, x0, y0, bin, srcLabel} plus a
+// Float32 little-endian row-major buffer (north-to-south rows, NaN = no-data),
+// same pixel-center convention. Rows become Float32Array views - no copy.
+// Used for the Jezero 4 m DTM, which is too large to ship as JSON.
+export function createGridFromBin(meta, buf) {
+  const { nx, ny, dx, x0, y0 } = meta;
+  const f = new Float32Array(buf);
+  if (f.length !== nx * ny) throw new Error(`4m grid: expected ${nx * ny} cells, got ${f.length}`);
+  const rows = [];
+  for (let j = 0; j < ny; j++) rows.push(f.subarray(j * nx, (j + 1) * nx));
+  const xMin = x0 - dx / 2, xMax = x0 + (nx - 1) * dx + dx / 2;
+  const yMax = y0 + dx / 2, yMin = y0 - (ny - 1) * dx - dx / 2;
+  const [latS, lonW] = toLatLon(xMin, yMin);
+  const [latN, lonE] = toLatLon(xMax, yMax);
+  return { nx, ny, dx, x0, y0, values: rows, srcLabel: meta.srcLabel || '', bounds: [[latS, lonW], [latN, lonE]] };
+}
+
 // hm: parsed heightmap json {nx, ny, dx, x0, y0, values[ny][nx]}.
 // x0/y0 are pixel-CENTER easting/northing of column 0 / top row; rows run
 // north to south. Returns a grid with sampling helpers and lat/lon bounds.
@@ -129,6 +146,84 @@ export function slopeRange(grid, a, b, dist) {
 
 function round1(v) { return Math.round(v * 10) / 10; }
 
+// Resample a lat/lon polyline's elevations on a (typically finer) grid: walk
+// the line every ~stepM meters, bilinear heights. Returns null when any
+// sample misses - a profile never mixes two sources silently. pts: [[lat,lon],...].
+export function profileFromLatLon(g, pts, stepM = 10) {
+  if (!g || !pts || pts.length < 2) return null;
+  const xy = pts.map(([la, lo]) => toM(lo, la));
+  const segLen = [];
+  let dist = 0;
+  for (let i = 1; i < xy.length; i++) {
+    const s = Math.hypot(xy[i][0] - xy[i - 1][0], xy[i][1] - xy[i - 1][1]);
+    segLen.push(s); dist += s;
+  }
+  const n = Math.max(1, Math.round(dist / stepM));
+  const profile = [];
+  let i = 1, acc = 0;
+  for (let k = 0; k <= n; k++) {
+    const target = (k / n) * dist;
+    while (i < xy.length - 1 && acc + segLen[i - 1] < target) { acc += segLen[i - 1]; i++; }
+    const seg = segLen[i - 1];
+    const u = seg === 0 ? 0 : Math.max(0, Math.min(1, (target - acc) / seg));
+    const x = xy[i - 1][0] + (xy[i][0] - xy[i - 1][0]) * u;
+    const y = xy[i - 1][1] + (xy[i][1] - xy[i - 1][1]) * u;
+    const h = bilinearH(g, x, y);
+    if (h == null) return null;
+    profile.push([Math.round(target * 100) / 100, h]);
+  }
+  return { dist: Math.round(dist * 100) / 100, profile };
+}
+
+// ---- shared profile slope statistics (single sampler for planner and the
+// two-point comparison, QA-aligned): linear interpolation of height at
+// distance x along a [[d, h], ...] profile, then a sliding one-baseline
+// window along the distance axis. The comparison in inspect.js re-exports
+// these; build_legs.py's archived slope_range is the separate straight-line
+// bilinear method above, kept for the archived-legs validation tests.
+export function interpProfile(profile, x) {
+  if (x <= 0) return profile[0][1];
+  const last = profile[profile.length - 1];
+  if (x >= last[0]) return last[1];
+  let lo = 0, hi = profile.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (profile[mid][0] <= x) lo = mid; else hi = mid;
+  }
+  const [d0, h0] = profile[lo], [d1, h1] = profile[hi];
+  return d1 === d0 ? h0 : h0 + (h1 - h0) * ((x - d0) / (d1 - d0));
+}
+
+// Min/max slope (degrees) over one baseM window walked along the sampled
+// profile in stepM increments. Same method whatever produced the profile
+// (straight segment or least-cost polyline), so numbers stay comparable.
+export function slopeRangeProfile(profile, baseM, stepM = 10) {
+  if (!profile || profile.length < 2) return null;
+  const dist = profile[profile.length - 1][0];
+  if (dist < baseM) return null;
+  let lo = null, hi = null;
+  for (let x = 0; x + baseM <= dist + 1e-6; x += stepM) {
+    const s = Math.atan2(interpProfile(profile, x + baseM) - interpProfile(profile, x), baseM) * 180 / Math.PI;
+    lo = lo == null ? s : Math.min(lo, s);
+    hi = hi == null ? s : Math.max(hi, s);
+  }
+  return lo == null ? null : [round1(lo), round1(hi)];
+}
+
+// Same sliding window, returned as a series [[midDistance, slopeDeg], ...]
+// for slope charts.
+export function slopeSeriesProfile(profile, baseM, stepM = 10) {
+  if (!profile || profile.length < 2) return [];
+  const dist = profile[profile.length - 1][0];
+  if (dist < baseM) return [];
+  const out = [];
+  for (let x = 0; x + baseM <= dist + 1e-6; x += stepM) {
+    const s = Math.atan2(interpProfile(profile, x + baseM) - interpProfile(profile, x), baseM) * 180 / Math.PI;
+    out.push([Math.round((x + baseM / 2) * 10) / 10, round1(s)]);
+  }
+  return out;
+}
+
 // Full metrics for one leg from the grid: distance (horizontal straight
 // segment), ascent/descent from the sampled profile, walk minutes at the
 // declared pace, and the slope range. Returns null when the leg cannot be
@@ -178,15 +273,22 @@ export function createRuntimeLegs(grid, ptsOf, opts = {}) {
     return path;
   };
 
+  // Optional finer grid (Jezero 4 m DTM): the leg GEOMETRY still comes from
+  // the routing grid (straight segment / A* on the 20 m grid, both models
+  // comparable); only the elevation sampling upgrades, never silently mixed -
+  // a missed sample keeps the whole leg on the routing grid.
+  const hi = opts.hiGrid || null;
   const getProfile = (key) => {
     if (profileCache.has(key)) return profileCache.get(key);
     const [aId, bId] = key.split('|');
     const a = ptsOf(aId), b = ptsOf(bId);
     let prof = null;
     if (a && b) {
+      let geom = null; // [[lat, lon], ...] actually walked
       if (routeModel === 'leastcost') {
         const r = getPath(key);
         if (r) {
+          geom = r.pathLatLon;
           // elevations along the A* polyline (its own node spacing)
           prof = [[0, r.pathGrid[0].elev]];
           let d = 0;
@@ -200,7 +302,11 @@ export function createRuntimeLegs(grid, ptsOf, opts = {}) {
         }
       } else {
         const leg = profileLeg(grid, a, b);
-        prof = leg ? leg.profile : null;
+        if (leg) { prof = leg.profile; geom = [[a.lat, a.lon], [b.lat, b.lon]]; }
+      }
+      if (hi && geom) {
+        const up = profileFromLatLon(hi, geom);
+        if (up) prof = up.profile;
       }
     }
     // Cache nulls too: an unsamplable leg stays unsamplable for this grid.
@@ -228,8 +334,12 @@ export function createRuntimeLegs(grid, ptsOf, opts = {}) {
           geology = rev.geology.map(s => [round1(dist - s[1]), round1(dist - s[0]), s[2], s[3]]).reverse();
         }
       }
+      // Slope range comes from the SAME profile the planner charts (straight
+      // segment or least-cost polyline), with the shared sliding-window
+      // sampler - identical statistics to the two-point comparison.
+      const prof = getProfile(key);
       meta = {
-        [slopeKey]: slopeRange(grid, a, b, dist),
+        [slopeKey]: prof ? slopeRangeProfile(prof, grid.dx) : null,
         geology,
         routeModel,
         // actual walked polyline for the map when the least-cost model is on
@@ -252,7 +362,10 @@ export function createRuntimeLegs(grid, ptsOf, opts = {}) {
   return {
     step_m: 10,
     runtime: true,
-    dtm: `${grid.srcLabel || 'elevation grid'} - computed at runtime in your browser: nearest-cell sampling at ~10 m along the straight segment between waypoints (same method as the archived precomputed legs) - not a surveyed path`,
+    dtm: (routeModel === 'leastcost'
+      ? `${grid.srcLabel || 'elevation grid'} - computed at runtime in your browser along the least-cost path (A* slope-penalty model; no-data impassable)`
+      : `${grid.srcLabel || 'elevation grid'} - computed at runtime in your browser along the straight segment between waypoints`)
+      + (hi ? `; elevation profiles sampled on the ${hi.srcLabel || '4 m DTM'}` : ''),
     legs: legsProxy,
     legsMeta: metaProxy,
     _grid: grid,

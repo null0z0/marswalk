@@ -1,5 +1,16 @@
-import { MapContainer, ImageOverlay, GeoJSON, Polyline, Tooltip, Marker, CircleMarker, Rectangle, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, ImageOverlay, GeoJSON, Polyline, Tooltip, Marker, CircleMarker, Rectangle, ZoomControl, useMap } from 'react-leaflet';
 import { useEffect } from 'react';
+import eventsData from '../data/historicalEvents.json';
+import medaData from '../data/meda.json';
+
+const EV_TYPE_LABEL = {
+  dust_storm_regional: 'Regional dust storm',
+  dust_storm_global: 'Planet-encircling dust event',
+  dust_devil: 'Dust devil',
+  marsquake: 'Marsquake',
+  meteoroid_impact: 'Meteoroid impact',
+  avalanche: 'Polar avalanche (CO2/dust fall)',
+};
 import L from 'leaflet';
 import 'proj4leaflet';
 
@@ -57,13 +68,36 @@ function FitStations({ stations, maxFitZoom, orthoBounds }) {
   return null;
 }
 
-// Forwards map clicks to the parent while "add waypoint" mode is active.
-function MapClickHandler({ addMode, onMapClick }) {
-  useMapEvents({
-    click(e) {
-      if (addMode && onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
+// Forwards map clicks to the parent while "add waypoint" or "inspect point"
+// mode is active (the parent keeps them mutually exclusive).
+// Implemented as a DOM listener + mouseEventToLatLng instead of Leaflet's map
+// 'click' event: the geology polygons tile the whole crop as interactive
+// layers, and Leaflet swallows the map click when an interactive layer is
+// hit, so clicks on mapped ground would never reach us.
+function MapClickHandler({ addMode, onMapClick, inspectMode = false, onInspect = null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!addMode && !inspectMode) return undefined;
+    const el = map.getContainer();
+    let downX = 0, downY = 0;
+    const onDown = (ev) => { downX = ev.clientX; downY = ev.clientY; };
+    const onClick = (ev) => {
+      // a pan ends with the mouse released somewhere else: not a placement click
+      if (Math.hypot(ev.clientX - downX, ev.clientY - downY) > 5) return;
+      // map controls (zoom buttons, attribution) and popup chrome are UI
+      // interaction, not ground placement
+      if (ev.target && ev.target.closest && ev.target.closest('.leaflet-popup, .leaflet-control')) return;
+      const latlng = map.mouseEventToLatLng(ev);
+      if (addMode && onMapClick) onMapClick(latlng.lat, latlng.lng);
+      else if (inspectMode && onInspect) onInspect(latlng.lat, latlng.lng);
+    };
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('click', onClick);
+    return () => {
+      el.removeEventListener('mousedown', onDown);
+      el.removeEventListener('click', onClick);
+    };
+  }, [map, addMode, inspectMode, onMapClick, onInspect]);
   return null;
 }
 
@@ -87,7 +121,7 @@ const OVERLAY_LAYERS = (region) => {
   return base;
 };
 
-export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, showPlan = true }) {
+export default function MapView({ stations, plan, geojson, roverTrack, terrainMeta, contours, layers, setLayers, region = 'jezero', baseId = 'Depot', solLimit = null, addMode = false, onMapClick = null, onMoveWaypoint = null, inspectMode = false, inspectPt = null, onInspect = null, legsProvider = null, routeModel = 'straight', setRouteModel = null, abLeg = null, abGeometry = null, abGeometryParts = null, abCompareGeom = null, showPlan = true }) {
   const ortho = ORTHO[region] || ORTHO.jezero;
   const byId = Object.fromEntries(stations.map(s => [s.id, s]));
   const droppedIds = plan.dropped.map(d => d.id);
@@ -105,9 +139,11 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer crs={crs} center={[(ortho.bounds[0][0] + ortho.bounds[1][0]) / 2, (ortho.bounds[0][1] + ortho.bounds[1][1]) / 2]} zoom={5} maxZoom={9} doubleClickZoom={false}
-        style={{ height: '100%', width: '100%', background: '#0a0e17', cursor: addMode ? 'crosshair' : '' }}>
-        <MapClickHandler addMode={addMode} onMapClick={onMapClick} />
+      <MapContainer crs={crs} center={[(ortho.bounds[0][0] + ortho.bounds[1][0]) / 2, (ortho.bounds[0][1] + ortho.bounds[1][1]) / 2]} zoom={5} maxZoom={9} doubleClickZoom={false} zoomControl={false}
+        style={{ height: '100%', width: '100%', background: '#0a0e17', cursor: (addMode || inspectMode) ? 'crosshair' : '' }}>
+        {/* zoom at top-right: the default top-left corner is under the Layers panel */}
+        <ZoomControl position="bottomleft" />
+        <MapClickHandler addMode={addMode} onMapClick={onMapClick} inspectMode={inspectMode} onInspect={onInspect} />
         <FitStations stations={stations} maxFitZoom={ortho.maxFitZoom} orthoBounds={ortho.bounds} />
         <ScaleControl />
         <ImageOverlay key={region} url={ortho.url} bounds={ortho.bounds} opacity={1} />
@@ -128,9 +164,13 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             onEachFeature={(f, l) => l.bindTooltip(`${f.properties.elev} m`, { sticky: true })} />
         )}
         {layers.geology && geojson && (
-          <GeoJSON key="geo" data={geojson}
+          <GeoJSON key={(addMode || inspectMode) ? 'geo-modal' : 'geo'} data={geojson}
             style={() => ({ color: '#7cc4ff', weight: 1.75, fillOpacity: 0.07 })}
-            onEachFeature={(f, l) => l.bindPopup(`<b>${f.properties.name}</b> (${f.properties.symbol})`)} />
+            onEachFeature={((addMode || inspectMode)
+              // while a click mode is armed the click belongs to the mode -
+              // the polygon must not swallow it into a popup
+              ? undefined
+              : (f, l) => l.bindPopup(`<b>${f.properties.name}</b> (${f.properties.symbol})`))} />
         )}
         {layers.roverRoute && roverTrack && roverTrack.route && (
           <Polyline positions={roverTrack.route.filter(p => solLimit == null || p[2] <= solLimit).map(p => [p[0], p[1]])}
@@ -160,7 +200,24 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           <Polyline key={'drop' + id} positions={[[lastVisited.lat, lastVisited.lon], [byId[id].lat, byId[id].lon]]}
             pathOptions={{ color: '#cc3333', weight: 2, dashArray: '6 6' }} />
         ))}
-        {abLeg && legsProvider && byId[abLeg[0]] && byId[abLeg[1]] && (() => {
+        {/* Route comparison mode: BOTH declared models for the same endpoints,
+            drawn together - straight geometric baseline dashed gray, least-cost
+            path solid lime. Exactly the geometries the comparison table samples. */}
+        {abCompareGeom && abLeg && byId[abLeg[0]] && byId[abLeg[1]] && (
+          <>
+            {abCompareGeom.straight && (
+              <Polyline positions={abCompareGeom.straight} pathOptions={{ color: '#9ca3af', weight: 2.5, dashArray: '6 6', opacity: 0.9 }}>
+                <Tooltip sticky className="station-label">straight-line geometric baseline (not a proposed path)</Tooltip>
+              </Polyline>
+            )}
+            {abCompareGeom.leastCost && (
+              <Polyline positions={abCompareGeom.leastCost} pathOptions={{ color: '#a3e635', weight: 3.5 }}>
+                <Tooltip sticky className="station-label">least-cost path (slope-aware model on the elevation grid; not a surveyed or safest route)</Tooltip>
+              </Polyline>
+            )}
+          </>
+        )}
+        {!abCompareGeom && abLeg && legsProvider && byId[abLeg[0]] && byId[abLeg[1]] && (() => {
           // user-chosen two-point route (lime) - drawn geometry matches the active model
           const meta = legsProvider.legsMeta[abLeg[0] + '|' + abLeg[1]];
           const pos = abGeometry
@@ -181,6 +238,28 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
             ? <Polyline positions={pos} pathOptions={{ color: '#a3e635', weight: 3.5 }} />
             : null; // unroutable: no line, the panel says why
         })()}
+        {/* Inspect marker: the clicked point the inspector panel describes. */}
+        {inspectPt && (
+          <Marker position={[inspectPt.lat, inspectPt.lon]}
+            icon={L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 9], html: '<div style="width:14px;height:14px;border-radius:50%;background:transparent;border:3px solid #e879f9;box-shadow:0 0 0 2px #0a0e17;"></div>' })}>
+            <Tooltip permanent direction="top" offset={[0, -10]} className="station-label">inspected point</Tooltip>
+          </Marker>
+        )}
+        {/* Recorded MEDA weather sols (Jezero): pinned ONLY at the rover's
+            recorded position that sol in the archived NASA M20 waypoints -
+            a verified anchor, never a guessed event position. */}
+        {layers.events && region === 'jezero' && roverTrack && roverTrack.route && Object.keys(medaData).map(Number).map(sol => {
+          const rec = roverTrack.route.find(r => r[2] === sol);
+          if (!rec) return null;
+          return (
+            <Marker key={`meda-${sol}`} position={[rec[0], rec[1]]}
+              icon={L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<div style="width:12px;height:12px;background:#fbbf24;border:1.5px solid #0a0e17;clip-path:polygon(50% 0%, 63% 35%, 98% 35%, 70% 57%, 81% 91%, 50% 70%, 19% 91%, 30% 57%, 2% 35%, 37% 35%);"></div>' })}>
+              <Tooltip direction="top" offset={[0, -8]}>
+                Recorded weather (MEDA) - sol {sol}: measured at the rover's recorded position that sol (archived NASA M20 waypoints). Historic point record, not current conditions.
+              </Tooltip>
+            </Marker>
+          );
+        })}
         {/* User waypoints: draggable, cyan-ringed, coordinates only. Dragging
             off the coverage grid is rejected by the parent (position snaps back). */}
         {layers.userWps && stations.filter(s => s.custom && s.lat != null).map(s => (
@@ -231,16 +310,50 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           Click inside the dashed coverage frame to place your waypoint
         </div>
       )}
+      {inspectMode && !addMode && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1002] bg-cyan-900/95 border border-cyan-400 rounded px-3 py-1 text-[11px] text-white shadow-lg pointer-events-none">
+          Click anywhere to read the data at that point
+        </div>
+      )}
+
+      {/* Historical event records for this workspace: crater-level context only.
+          No verified event position exists inside this map's data (the archived
+          traverse has no rover record for the in-situ events' sols, and the other
+          records happened kilometers from the rover or regionally), so NOTHING is
+          pinned here - positions are never guessed. Verified point markers for
+          other events live on the Global globe. */}
+      {layers.events && (() => {
+        const regionEvents = eventsData.events.filter(e => e.workspace === region);
+        if (!regionEvents.length) return null;
+        return (
+          <div className="absolute bottom-8 right-2 z-[1000] bg-[#0d1420] border border-amber-800 rounded p-1.5 text-[9px] text-gray-200 max-w-[230px] shadow-lg">
+            <div className="flex items-start justify-between gap-2">
+              <b className="text-amber-300">Recorded natural events - {region === 'gale' ? 'Gale' : 'Jezero'} Crater</b>
+              <button type="button" aria-label="Hide event records" onClick={() => toggle('events')}
+                className="text-gray-500 hover:text-gray-200 shrink-0">x</button>
+            </div>
+            <div className="text-gray-400 mt-0.5">Historical records, not current conditions. None of these records has a verified position inside this map, so none is pinned - no position is guessed. {region === 'jezero' ? 'The amber stars mark the 2 recorded MEDA weather sols (477, 502) at the rover\'s recorded position those sols. ' : ''}Verified point markers (InSight quakes, Amazonis impact, polar avalanches) are on the Global globe.</div>
+            {regionEvents.map(e => (
+              <div key={e.id} className="mt-1 pt-1 border-t border-gray-800">
+                <b className="text-gray-100">{EV_TYPE_LABEL[e.type] || e.type}</b>
+                <span className="text-gray-300"> - {e.date_utc}{e.sol != null ? ` (Sol ${e.sol})` : ''}</span>
+                <div className="text-gray-400">{e.summary}</div>
+                {e.source_url && <a href={e.source_url} target="_blank" rel="noreferrer" className="text-cyan-400 underline">Source{e.credit ? `: ${e.credit}` : ''}</a>}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Layers panel */}
       <details className="absolute top-2 left-2 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded p-1.5 text-[10px] text-gray-300 max-w-[240px] shadow-lg">
         <summary className="cursor-pointer font-bold text-cyan-400 select-none">Layers</summary>
         <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
-          <div className="text-gray-500">Features (each shows with its own shape / line style):</div>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} /> <span className="w-3 h-0.5 bg-[#22d3ee] inline-block"></span> Planned route (your plan, stop to stop)</label>
+          <div className="text-gray-400 font-bold">Your plan</div>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.plannedRoute} onChange={() => toggle('plannedRoute')} /> <span className="w-3 h-0.5 bg-[#22d3ee] inline-block"></span> Planned route (stop to stop)</label>
           {layers.plannedRoute && setRouteModel && (
             <label className="flex items-center gap-1.5 pl-4">Model
-              <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)} className="bg-[#0a0e17] border border-cyan-900 rounded px-1 py-0.5 text-[10px]">
+              <select aria-label="Route model" value={routeModel} onChange={e => setRouteModel(e.target.value)} className="bg-[#0a0e17] border border-cyan-900 rounded px-1 py-0.5 text-[10px] min-w-0 flex-1 max-w-full">
                 <option value="straight">Straight line (geometric baseline)</option>
                 <option value="leastcost">Least-cost over terrain (slope-aware)</option>
               </select>
@@ -248,14 +361,35 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
           {layers.plannedRoute && routeModel === 'leastcost' && (
             <div className="pl-4 text-[9px] text-gray-500">A* over the elevation grid: no-data ground impassable, steep slopes cost more. A model under declared rules, not a surveyed or safe path. Times/distances follow this geometry.</div>)}
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.droppedLegs} onChange={() => toggle('droppedLegs')} /> <span className="w-3 border-t border-dashed border-[#cc3333] inline-block"></span> Deferred legs</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} /> Science objectives (shape per stop)</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} /> <span className="w-2 h-2 rounded-full bg-white border border-black inline-block"></span> Base</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.baseMarker} onChange={() => toggle('baseMarker')} /> <span className="w-2 h-2 rounded-full bg-white border border-black inline-block"></span> Base (scenario start)</label>
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.userWps} onChange={() => toggle('userWps')} /> <span className="w-2.5 h-2.5 rounded-full border-2 border-[#22d3ee] bg-[#0a0e17] inline-block"></span> Your waypoints</label>
-          {region === 'jezero' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} /> USGS geology (SIM 3464 - semi-controlled CTX basemap, registration offset ~100-200 m vs rover waypoint records: unit boundaries are approximate at stop scale, not contact-level)</label>}
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} /> {roverTrack && roverTrack.segments ? 'NASA recorded traverse geometry' : 'Recorded rover positions (connected)'}</label>
+
+          <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Places & rover record</div>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.objectives} onChange={() => toggle('objectives')} /> Science objectives (shape per stop)</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverRoute} onChange={() => toggle('roverRoute')} /> {roverTrack && roverTrack.segments ? 'Recorded drive path (NASA archive)' : 'Recorded rover positions (connected)'}</label>
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.roverStops} onChange={() => toggle('roverStops')} /> Recorded rover stops</label>
-          {region === 'gale' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} /> CRISM 770 nm reflectance (JHU/APL 2012 targeted mosaic, source resolution 19-38 m/px (FRT ~19 m, HRL ~38 m) - brightness only, NOT a mineral map; cropped with an integer-pixel window-edge match, so small spatial offsets up to about one 19 m source pixel are possible)</label>}
-          {terrainMeta && <div className="pt-1 border-t border-gray-800 text-gray-500">Derived from the elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - views of the same data, not independent measurements:</div>}
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.events} onChange={() => toggle('events')} /> <span className="w-2.5 h-2.5 inline-block" style={{ background: '#fbbf24', clipPath: 'polygon(50% 0%, 63% 35%, 98% 35%, 70% 57%, 81% 91%, 50% 70%, 19% 91%, 30% 57%, 2% 35%, 37% 35%)' }}></span> Historical event records</label>
+          <details className="ml-5 text-[9px] text-gray-500">
+            <summary className="cursor-pointer select-none">what is pinned, what is not</summary>
+            {region === 'jezero'
+              ? 'Weather sols 477+502 are pinned at the rover\'s recorded positions those sols (archived M20 waypoints). The natural events are crater-level context: no verified positions inside this map, so no pins - positions are never guessed.'
+              : 'Crater-level context only: no verified event positions inside this map, so nothing is pinned - positions are never guessed.'}
+          </details>
+
+          <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Geology maps</div>
+          {region === 'jezero' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.geology} onChange={() => toggle('geology')} /> USGS geology units (SIM 3464)</label>}
+          {region === 'jezero' && <details className="ml-5 text-[9px] text-gray-500">
+            <summary className="cursor-pointer select-none">accuracy limits</summary>
+            Semi-controlled CTX basemap: unit boundaries carry ~100-200 m registration vs rover waypoint records - approximate at stop scale, not contact-level. Rock type does not rate how hard the walking is.
+          </details>}
+          {region === 'gale' && <label className="flex items-center gap-1.5"><input type="checkbox" checked={layers.crismVna} onChange={() => toggle('crismVna')} /> CRISM 770 nm brightness</label>}
+          {region === 'gale' && <details className="ml-5 text-[9px] text-gray-500">
+            <summary className="cursor-pointer select-none">what this layer is</summary>
+            JHU/APL 2012 targeted mosaic, source resolution 19-38 m/px (FRT ~19 m, HRL ~38 m). Brightness only, NOT a mineral or unit map. Cropped with an integer-pixel window-edge match, so offsets up to about one 19 m source pixel are possible.
+          </details>}
+
+          {terrainMeta && <div className="text-gray-400 font-bold pt-1 border-t border-gray-800">Terrain layers</div>}
+          {terrainMeta && <div className="text-[9px] text-gray-500">Views of the same elevation grid ({region === 'gale' ? 'MSL Gale merged DEM 1 m, decimated to 2 m' : 'CTX DTM 20 m'}) - not independent measurements:</div>}
           {terrainMeta && OVERLAY_LAYERS(region).map(ol => (
             <label key={ol.key} className="flex items-center gap-1.5"><input type="checkbox" checked={layers[ol.key]} onChange={() => toggle(ol.key)} /> {ol.label}</label>
           ))}
@@ -280,7 +414,8 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
         <summary className="cursor-pointer font-bold text-cyan-400 select-none">Legend & Data</summary>
         <div className="mt-1 space-y-1 pt-1 border-t border-gray-800">
           <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#22d3ee]"></span> Planned route ({routeModel === 'leastcost' ? 'least-cost terrain model' : 'straight-line baseline'})</div>
-          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#a3e635]"></span> Your two-point route (same model{region === 'gale' ? ', or the recorded drive path when following it' : ''})</div>
+          <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#a3e635]"></span> {abCompareGeom ? 'Least-cost path (slope-aware model)' : `Your two-point route (same model${region === 'gale' ? ', or the recorded drive path when following it' : ''})`}</div>
+          {abCompareGeom && <div className="flex items-center gap-1.5"><span className="w-3 border-t border-dashed border-[#9ca3af] inline-block"></span> Straight-line baseline (comparison, not a proposed path)</div>}
           {region === 'gale' && <div className="flex items-center gap-1.5"><span className="w-3 border-t-2 border-dashed border-[#a3e635] opacity-80"></span> Synthetic gap connector (not recorded drive ground)</div>}
           {region === 'jezero' && <div className="flex items-center gap-1.5"><span className="w-3 h-3 border border-[#7cc4ff] bg-[#7cc4ff]/10 inline-block"></span> USGS geology unit boundaries (SIM 3464)</div>}
           <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t border-dashed border-[#cc3333]"></span> Deferred / dropped leg</div>
