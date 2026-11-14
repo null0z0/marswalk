@@ -214,6 +214,7 @@ export default function GlobalView({ onOpenRegion, resetKey = 0 }) {
     setDemError(null);
   }, [resetKey]);
   const [visibleKeys, setVisibleKeys] = useState({ sig: '', keys: new Set() });
+  const [view, setView] = useState({ dist: 3, dir: [0, 0.9, 3] });
   const bannerRef = useRef(null);
   const buttonsRef = useRef(null);
   const canvasWrapRef = useRef(null);
