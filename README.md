@@ -30,15 +30,17 @@ Every number, coordinate, elevation, image, caption, and label shown as DATA tra
 
 Full traceability — exact values, source URLs, retrieval dates, checksums, and verification suites — is in `src/data/PROVENANCE.md` and `scripts/`.
 
-## Radiation card (Gale Crater)
+## Radiation environment (per station)
 
-The region panel shows a Radiation card (`src/components/RadiationCard.jsx`) that reads `src/data/radiation.json`.
+Radiation shows in the **Endpoint details** panel on the right rail (`src/components/RoutePointDetails.jsx`, "Radiation environment" section). It reads per-station radiation data from `src/data/stations.json` — each station carries `radiationUsGyPerDay`, `radiationType`, and `radiationNote`.
 
-- Gale Crater: shows the surface dose rates measured by the RAD instrument on the Curiosity rover - dose equivalent 0.64 ± 0.12 mSv/day, absorbed dose 0.21 ± 0.04 mGy/day, and 320 ± 50 mSv for a 500-day surface stay - with the measurement period (7 August 2012 to 1 June 2013, ~300 sols, near solar maximum).
-- Scope: galactic cosmic rays (GCR) only. Solar energetic particle events are not included in these values.
-- Jezero: shows "Not computed for this region", because the measurement is from Gale Crater, not Jezero. Nothing is estimated or transferred between regions.
-- Source: Hassler et al., Science 343, 1244797 (2014), Table 1 (surface column). Row added to `src/data/PROVENANCE.md`.
-- Any dose for a given stay time (for example, hours on the surface) would be our own constant-rate arithmetic and is not in the paper, so it must be labeled as such.
+- Gale Crater stations (Rocknest, Shaler, drill sites, Departure): surface dose rates measured by the RAD instrument on Curiosity - absorbed dose ~0.21 mGy/day (210 µGy/day), labeled "measured" per Hassler et al., Science 343, 1244797 (2014).
+- Jezero stations (Wildcat Ridge, Skinner Ridge, Shuyak, Mageik): ~180 µGy/day, labeled "estimated" from Mars surface radiation models and orbital data — no direct Jezero surface RAD measurement exists.
+- Three Forks depot and Kukaklek: "No surface data" — nothing estimated.
+- Scope: surface dose context only. Not used by the route planner, does not change leg time or cost. Galactic cosmic rays only; solar energetic particle events not included.
+- A displayed level chip (Low / Moderate / High) is derived from the µGy/day value in the UI, not from the source paper.
+
+Any dose for a given stay time (for example, hours on the surface) is our own constant-rate arithmetic, not in the paper, and is labeled as such.
 
 ## Verification
 
