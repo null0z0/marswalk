@@ -93,17 +93,15 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
         )}
 
         <div className="header-actions">
-          {appMode === 'planner' && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm objectives-toggle"
-              onClick={onOpenObjectives}
-              aria-label="Open science objectives"
-            >
-              <TargetIcon />
-              <span className="btn-label">Objectives</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm objectives-toggle"
+            onClick={onOpenObjectives}
+            aria-label={appMode === 'planner' ? 'Open science objectives' : 'Open sites, region and waypoints panel'}
+          >
+            <TargetIcon />
+            <span className="btn-label">{appMode === 'planner' ? 'Objectives' : 'Sites'}</span>
+          </button>
           <button
             type="button"
             className="btn btn-secondary btn-sm brief-toggle"
@@ -140,7 +138,7 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
               : 'No route between these points (outside data coverage or no-data ground) - we do not guess a path.'}</span></span>
             )
           ) : (
-            <span className="metric" style={{ maxWidth: '100%' }}><span className="metric-value metric-unit" style={{ whiteSpace: 'normal' }}>Pick two places in "Route between two points" to compare a computed route between them.</span></span>
+            <span className="metric route-hint" style={{ maxWidth: '100%' }}><span className="metric-value metric-unit" style={{ whiteSpace: 'normal' }}>Pick two places in "Route between two points" to compare a computed route between them.</span></span>
           )}
         </div>)}
 
