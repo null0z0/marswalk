@@ -242,7 +242,7 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
       )}
 
       {/* Layers panel — collapsible control groups */}
-      <details className="absolute top-2 left-12 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded shadow-lg max-w-[270px]">
+      <details className="map-layers-details absolute top-2 left-12 z-[1000] bg-[#0d1420]/95 border border-cyan-900 rounded shadow-lg max-w-[270px]">
         <summary className="cursor-pointer flex items-center justify-between gap-8 px-3 py-2 font-bold text-cyan-400 select-none">
           <span>Layers</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -480,4 +480,4 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
       </details>
     </div>
   );
-}
+                    }
