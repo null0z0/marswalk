@@ -480,4 +480,4 @@ export default function MapView({ stations, plan, geojson, roverTrack, terrainMe
       </details>
     </div>
   );
-                    }
+}
