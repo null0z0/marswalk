@@ -288,6 +288,29 @@ function CameraFit({ fit }) {
   return null;
 }
 
+// Initial fit: pull the camera back far enough that the whole planet fits
+// the canvas on first paint (narrow phone screens crop the disc at the
+// desktop distance). Runs once, before any interaction; OrbitControls and
+// CameraFit own the camera afterwards.
+function InitialFit() {
+  const { camera, size } = useThree();
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current || !size.width || !size.height) return;
+    done.current = true;
+    const aspect = size.width / size.height;
+    const halfV = (camera.fov * Math.PI) / 360;
+    const halfH = Math.atan(Math.tan(halfV) * aspect);
+    const need = 1.06 / Math.sin(Math.min(halfV, halfH));
+    const d = camera.position.length();
+    if (need > d) {
+      camera.position.copy(camera.position.clone().normalize().multiplyScalar(Math.min(need, 5.6)));
+      camera.lookAt(0, 0, 0);
+    }
+  });
+  return null;
+}
+
 function ZoomTracker({ setView }) {
   const { camera } = useThree();
   useFrame(() => setView(v => {
@@ -304,6 +327,7 @@ export default function GlobalView({ onOpenRegion, endpoints, abMetrics, routeMo
   const [catalog, setCatalog] = useState(null);
   const [selected, setSelected] = useState(null);
   const [bannerOpen, setBannerOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 560 : true);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [nom, setNom] = useState(null);
   const [demFrom, setDemFrom] = useState('');
   const [demTo, setDemTo] = useState('');
@@ -382,6 +406,7 @@ export default function GlobalView({ onOpenRegion, endpoints, abMetrics, routeMo
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 2, 4]} intensity={1.1} />
         <MarsSphere globeRef={globeRef} />
+        <InitialFit />
         <ZoomTracker setView={setView} />
         <CameraFit fit={fit} />
         <LabelLayout features={candidates} view={view} density={labelDensity} setVisibleKeys={setVisibleKeys} excludeRects={excludeRects} />
@@ -535,7 +560,12 @@ export default function GlobalView({ onOpenRegion, endpoints, abMetrics, routeMo
       </div>
 
 
-      <div className="global-left-col" style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100% - 16px)' }}>
+      <div className={`global-left-col${sheetOpen ? ' sheet-open' : ''}`}>
+        <button type="button" className="global-sheet-handle" aria-expanded={sheetOpen}
+          onClick={() => setSheetOpen(o => !o)}>
+          <span className="global-sheet-handle-grip" aria-hidden="true" />
+          {sheetOpen ? 'Hide globe panels' : 'Globe panels: info, elevation, events'}
+        </button>
       <div ref={bannerRef} style={{ maxWidth: bannerOpen ? 300 : 170, overflowY: 'auto', flexShrink: 1, minHeight: 0 }}
         className="bg-[#0d1420] border border-cyan-900 rounded p-2 text-[10px] text-gray-300">
         <div className="flex items-center justify-between gap-2">
