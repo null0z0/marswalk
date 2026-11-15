@@ -3971,12 +3971,10 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-@media (max-width: 767px) {
-  /* Global view: stack the globe controls below the view switcher so the
-     two top-right clusters no longer overlap on phones. */
-  .app-shell.is-global .globe-controls {
-    top: 56px;
-  }
+/* Global view: stack the globe controls below the view switcher so the
+   two top-right clusters no longer overlap (all viewports). */
+.app-shell.is-global .globe-controls {
+  top: 56px;
 }
 
 @media (max-width: 1023px) {
