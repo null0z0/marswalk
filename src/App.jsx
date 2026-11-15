@@ -242,6 +242,9 @@ export default function App() {
     setBaseOverride(null);
     setWaypointError(null);
     setAddMode(false);
+    // Route selections name places in the old region - never carry them over.
+    setAbFrom(null);
+    setAbTo(null);
   };
 
   // ---- user waypoints ----------------------------------------------------
@@ -679,4 +682,4 @@ function CoordinateEntry({ onAdd }) {
         className="px-1.5 py-0.5 bg-[#101826] border border-cyan-900 rounded text-cyan-300 text-[10px] disabled:opacity-40">add</button>
     </form>
   );
-}
+          }
