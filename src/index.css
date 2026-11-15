@@ -3531,9 +3531,8 @@ input[type="range"]::-moz-range-thumb {
   white-space: nowrap;
 }
 .globe-distance-panel {
-  position: absolute;
+  position: static; /* in the left panel column flow since the events-layer restore */
   pointer-events: auto;
-  z-index: 60;
   width: min(300px, 92vw);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
@@ -3675,5 +3674,73 @@ input[type="range"]::-moz-range-thumb {
   .globe-controls { top: 8px; right: 8px; }
   .globe-control-row { font-size: 0.6875rem; padding: 5px 8px; }
   .globe-control-row select { min-width: 90px; font-size: 0.65rem; }
-  .globe-distance-panel { width: calc(100vw - 16px); left: 8px !important; right: 8px !important; transform: none !important; }
+  .globe-distance-panel { width: auto; max-width: 100%; }
+  .global-left-col { max-height: calc(100% - 120px) !important; overflow-y: auto; }
+  /* The right-hand view/controls cluster overlays the globe; keep the banner
+     clear of it so its hide toggle stays tappable on phones. */
+  .global-left-col > div:first-child { max-width: calc(100vw - 190px) !important; }
+}
+
+/* Globe marker touch targets (min 44px) on mobile - restored after merge loss */
+.globe-marker-touch {
+  position: relative;
+  display: inline-block;
+}
+
+.globe-marker-touch::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.globe-marker-touch button {
+  position: relative;
+  z-index: 2;
+}
+
+/* Mode tabs: full label on wide screens, compact label on narrow ones.
+   (.mode-tabs-header and .segmented are the same element in the current DOM;
+   the compact span must never render alongside the full label.) */
+.mode-tabs-header button .mode-tab-compact {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .mode-tabs-header {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .mode-tabs-header button {
+    flex: 1;
+    min-height: 40px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .mode-tabs-header button .mode-tab-full {
+    display: none;
+  }
+
+  .mode-tabs-header button .mode-tab-compact {
+    display: inline;
+  }
+}
+
+@media (max-width: 844px) and (orientation: landscape) {
+  .mode-tabs-header button .mode-tab-compact {
+    display: none;
+  }
+
+  .mode-tabs-header button .mode-tab-full {
+    display: inline;
+    font-size: 0.6875rem;
+  }
 }
