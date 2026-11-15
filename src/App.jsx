@@ -404,6 +404,9 @@ export default function App() {
           className={`rail rail--objectives rail-scroll${drawerOpen ? ' is-open' : ''}`}
           aria-label="Mission and objectives"
         >
+          <button type="button" className="icon-button drawer-close drawer-close--top" onClick={() => setDrawerOpen(false)} aria-label="Close panel">
+            ✕
+          </button>
           <section className="panel">
             <div className="panel-head">
               <div className="eyebrow">Region & mission</div>
