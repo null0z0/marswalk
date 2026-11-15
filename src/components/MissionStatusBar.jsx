@@ -257,35 +257,16 @@ export default function MissionStatusBar({ traverseGapM = 0, traverseRefused = f
         )}
       </div>}
 
-      <div className="mission-context">
-        <p className="context-copy">
-          {appMode === 'route' ? (
-            <>
-              <span className="context-long">
-                <strong>Two-point route comparison.</strong> Pick any two real places to compare a computed route between them on real USGS elevation data (straight baseline vs slope-aware least-cost path).
-              </span>
-              <span className="context-short">
-                <strong>Two-point route.</strong> Compare straight baseline vs least-cost path on USGS terrain.
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="context-long">
-                <strong>Adaptive mission planner.</strong> Plan a science-driven traverse against the EVA time window. The planner optimizes visit order and defers lowest-priority science if time runs short, explaining every decision.
-              </span>
-              <span className="context-short">
-                <strong>Mission planner.</strong> Adaptive re-planning against EVA time budget.
-              </span>
-            </>
-          )}
-        </p>
-        {appMode === 'planner' && <div className="context-actions">
-          <span className="next-stop">
-            <span className="next-stop-label">Next</span>
-            <b>{nextStopName || 'Return to start'}</b>
-          </span>
-        </div>}
-      </div>
+      {appMode === 'planner' && (
+        <div className="mission-context">
+          <div className="context-actions">
+            <span className="next-stop">
+              <span className="next-stop-label">Next</span>
+              <b>{nextStopName || 'Return to start'}</b>
+            </span>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

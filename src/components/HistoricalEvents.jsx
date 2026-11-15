@@ -86,9 +86,12 @@ export default function HistoricalEvents({ region }) {
   return (
     <section className="panel text-xs">
       <details className="disclosure">
-        <summary className="text-xs">
-          <span className="eyebrow">Recorded natural events</span>
-          <span className="text-xs text-slate-400 font-mono"> ({local.length} crater + {context.length} Mars)</span>
+        <summary className="flex items-center justify-between gap-8 list-none">
+          <div className="flex items-center gap-2">
+            <span className="eyebrow">Recorded natural events</span>
+            <span className="badge">({local.length} crater + {context.length} Mars)</span>
+          </div>
+          <span className="chevron" aria-hidden="true"></span>
         </summary>
         <div className="disclosure-body space-y-2 mt-1">
           <div className="text-xs text-slate-300 leading-normal border border-cyan-900/40 rounded-lg p-2 bg-[#070d18]/60">

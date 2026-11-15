@@ -45,7 +45,7 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
   });
 
   return (
-    <div className="p-2 bg-[#101826] rounded border border-cyan-900 tl-wrap">
+    <div className="p-3 bg-[#101826] rounded border border-cyan-900 tl-wrap">
       <div className="tl-head">
         <div className="tl-title">Rover record timeline</div>
         <span className="tl-sol">sol {N}</span>
@@ -57,7 +57,7 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
         {range.kind === 'positions'
           ? `Archive sols ${range.lo}-${range.hi}: map shows recorded rover positions up to sol ${N} (${roverTrack.route.filter(p => p[2] <= N).length} of ${roverTrack.route.length} records).`
           : `Archive sols ${range.lo}-${range.hi}: map shows recorded site stops reached by sol ${N} (${reached.length} of ${pts.length} stops).`}
-        Sparse records connected by straight lines - the driven path between records is not in this dataset.
+        {' '}Sparse records connected by straight lines - the driven path between records is not in this dataset.
         {' '}This filters the recorded archive only - the walk plan is unchanged.
         {solLimit != null && <button onClick={() => setSolLimit(null)} className="ml-1 text-cyan-400 underline text-[9px]">reset (full archive)</button>}
       </div>
@@ -65,8 +65,8 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
         <svg viewBox="0 0 220 56" className="w-full h-full block" aria-label="Rover record positions by sol" role="img">
           <line x1="30" y1="30" x2="206" y2="30" stroke="#164e63" strokeWidth="1.5" />
           <line x1="30" y1="30" x2={X(N)} y2="30" stroke="#22d3ee" strokeWidth="1.5" className="tl-progress" />
-          <text x="30" y="52" fontSize="7" fill="#789">sol {range.lo}</text>
-          <text x="206" y="52" fontSize="7" fill="#789" textAnchor="end">sol {range.hi}</text>
+          <text x="30" y="52" fontSize="10" fill="#789">sol {range.lo}</text>
+          <text x="206" y="52" fontSize="10" fill="#789" textAnchor="end">sol {range.hi}</text>
           {labelEls.map(({ s, on, name, y }) => {
             const cx = X(s.sol);
             const markerCls = on ? 'tl-marker tl-marker--reached' : s.sol === N ? 'tl-marker tl-marker--current' : 'tl-marker tl-marker--ahead';
@@ -84,7 +84,7 @@ export default function SolTimeline({ stations, region, roverTrack, solLimit, se
         </svg>
       </div>
       <div className="tl-note">
-        Stop dots are waypoint-record sols. This filters the recorded archive only - the walk plan is unchanged.
+        Stop dots are waypoint-record sols.
       </div>
     </div>
   );

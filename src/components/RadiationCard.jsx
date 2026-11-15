@@ -5,11 +5,15 @@ export default function RadiationCard({ region }) {
 
   if (!isGale) {
     return (
-      <div className="mt-2 p-2 rounded border border-gray-700 text-[10px] text-gray-400">
-        <div className="font-bold text-gray-200">Radiation</div>
-        <div>
-          Not computed for this region. The only radiation measurement in this
-          tool is from Gale Crater (Curiosity RAD).
+      <div className="panel text-xs">
+        <div className="panel-head">
+          <div className="eyebrow">Radiation</div>
+        </div>
+        <div className="panel-body space-y-1">
+          <div className="text-[10px] text-gray-400 leading-relaxed">
+            Not computed for this region. The only radiation measurement in this
+            tool is from Gale Crater (Curiosity RAD).
+          </div>
         </div>
       </div>
     );
@@ -20,16 +24,33 @@ export default function RadiationCard({ region }) {
   const mission = radiation.missionDoseEquivalent500Days;
 
   return (
-    <div className="mt-2 p-2 rounded border border-gray-700 text-[10px] text-gray-400">
-      <div className="font-bold text-gray-200">
-        Radiation (measured at {radiation.region})
+    <div className="panel text-xs">
+      <div className="panel-head">
+        <div className="eyebrow">Radiation (measured at Gale Crater)</div>
       </div>
-      <div>Dose equivalent: {eq.value} ± {eq.uncertainty} {eq.unit}</div>
-      <div>Absorbed dose: {ab.value} ± {ab.uncertainty} {ab.unit}</div>
-      <div>500-day surface stay: {mission.value} ± {mission.uncertainty} {mission.unit}</div>
-      <div>{radiation.period}</div>
-      <div>{radiation.scope}</div>
-      <div>Source: {radiation.source.citation}, {radiation.source.table}</div>
+      <div className="panel-body space-y-1">
+        <div className="flex items-baseline gap-1">
+          <span className="radiation-label">Dose equivalent</span>
+          <span className="radiation-value">{eq.value}</span><span className="radiation-value"> ± {eq.uncertainty}</span>
+          <span className="text-xs text-gray-500">{eq.unit}</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="radiation-label">Absorbed dose</span>
+          <span className="radiation-value">{ab.value}</span><span className="radiation-value"> ± {ab.uncertainty}</span>
+          <span className="text-xs text-gray-500">{ab.unit}</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="radiation-label">500-day surface stay</span>
+          <span className="radiation-value">{mission.value}</span><span className="radiation-value"> ± {mission.uncertainty}</span>
+          <span className="text-xs text-gray-500">{mission.unit}</span>
+        </div>
+        <div className="radiation-note">{radiation.period}</div>
+        <div className="radiation-note">{radiation.appliesTo}</div>
+        <div className="radiation-note">{radiation.scope}</div>
+        <div className="mt-1 pt-1 border-t border-cyan-900/30">
+          <div className="text-[9px] text-gray-500 leading-relaxed">Source: {radiation.source.citation}, {radiation.source.table}</div>
+        </div>
+      </div>
     </div>
   );
 }

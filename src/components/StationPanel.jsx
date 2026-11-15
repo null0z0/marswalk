@@ -43,7 +43,9 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
           </div>
           {(base.flags || []).length > 0 && (
             <details className="place-disclosure" open>
-              <summary>Scientific caveats &amp; source</summary>
+              <summary className="flex items-center justify-between gap-8">
+                Scientific caveats &amp; source<span className="chevron" aria-hidden="true"></span>
+              </summary>
               <div className="place-disclosure-body">
                 {(base.flags || []).map((f, i) => (
                   <div key={i} className="flag" aria-label="flag">⚠ {f}</div>
@@ -87,7 +89,7 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
             )}
             {!isCustom && (
               <div className={`place-body ${status.kind === 'dropped' ? 'place-body--collapsed' : ''}`}>
-                {(() => { const [first, ...rest] = (s.objective || '').split(/(?<=\.)\s+/); return <><b className="text-gray-200">{first}</b>{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}
+                {(() => { const [first, ...rest] = (s.objective || '').split(/(?<=\.)\s+/); return <>{first}{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}
               </div>
             )}
             <div className="place-tags">
@@ -99,9 +101,11 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
             {!isCustom && (
               <>
                 <details className="place-disclosure">
-                  <summary>Objective, caveats &amp; source{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}</summary>
+                  <summary>
+                    Objective, caveats &amp; source{s.photo ? ', photo' : ''}{s.meda ? ', measured conditions' : ''}<span className="chevron" aria-hidden="true"></span>
+                  </summary>
                   <div className="place-disclosure-body">
-                    <div className="mt-1">{(() => { const [first, ...rest] = (s.objective || '').split(/(?<=\.)\s+/); return <><b className="text-gray-200">{first}</b>{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}</div>
+                    <div className="mt-1">{(() => { const [first, ...rest] = (s.objective || '').split(/(?<=\.)\s+/); return <>{first}{rest.length ? ' ' + rest.join(' ') : ''}</>; })()}</div>
                     {(s.flags || []).map((f, i) => (
                       <div key={i} className="flag" aria-label="flag">⚠ {f}</div>
                     ))}
@@ -116,8 +120,10 @@ export default function StationPanel({ stations, baseId = 'Depot', priorities, s
                       <img src={s.photo} alt={s.name} className={status.kind === 'dropped' ? 'grayscale opacity-60' : ''} />
                       <div className="place-media-tag">{s.photoId ? s.photoId : 'NASA raw image'}</div>
                     </div>
-                    <div className="text-[9px] text-gray-500 mt-1">{s.photoNote}</div>
-                    {s.src && <div className="text-[9px] text-gray-500 mt-1 source-link" aria-label="source"><a href={s.src} target="_blank" rel="noreferrer" className="underline text-cyan-400">source</a></div>}
+                    <div className="pt-1 px-11 pb-2">
+                      <div className="text-[9px] text-gray-500 photo-note">{s.photoNote}</div>
+                      {s.src && <div className="mt-1 source-link" aria-label="source"><a href={s.src} target="_blank" rel="noreferrer" className="underline text-cyan-400">source</a></div>}
+                    </div>
                   </>
                 )}
               </>

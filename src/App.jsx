@@ -17,7 +17,7 @@ import HistoricalEvents from './components/HistoricalEvents.jsx';
 import RoutePointDetails from './components/RoutePointDetails.jsx';
 import PointInspector from './components/PointInspector.jsx';
 import BottomSheet from './components/BottomSheet.jsx';
-import { MapIcon, TerrainIcon, ResetIcon, OrbitSmallIcon } from './components/Icons.jsx';
+import { MapIcon, TerrainIcon, ResetIcon, OrbitSmallIcon, SwapIcon } from './components/Icons.jsx';
 import { buildPlan, legMetrics } from './lib/planner.js';
 import { buildTraverseGraph, traversePath, SNAP_TOLERANCE_M } from './lib/traverse.js';
 import { createGrid, createRuntimeLegs, containsLatLon } from './lib/terrain.js';
@@ -405,14 +405,18 @@ export default function App() {
           aria-label="Mission and objectives"
         >
           <section className="panel">
-            <div className="eyebrow">Region & mission</div>
-            <select className="w-full bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
-              value={scenarioId} onChange={e => switchScenario(e.target.value)}>
-              {Object.entries(scenarios).map(([id, sc]) => <option key={id} value={id} disabled={!!sc.disabled}>{sc.label}{sc.disabled ? ' (in build)' : ''}</option>)}
-            </select>
-            <div className="text-[10px] text-gray-400 leading-snug mt-1">{scenario.blurb}</div>
-            <div className="text-[9px] text-gray-500 leading-snug border border-gray-800 rounded p-1.5 bg-[#0d1420]/60 mt-1">
-              Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
+            <div className="panel-head">
+              <div className="eyebrow">Region & mission</div>
+            </div>
+            <div className="panel-body space-y-2">
+              <select className="w-full bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
+                value={scenarioId} onChange={e => switchScenario(e.target.value)}>
+                {Object.entries(scenarios).map(([id, sc]) => <option key={id} value={id} disabled={!!sc.disabled}>{sc.label}{sc.disabled ? ' (in build)' : ''}</option>)}
+              </select>
+              <div className="text-[10px] text-gray-400 leading-snug">{scenario.blurb}</div>
+              <div className="text-[9px] text-gray-500 leading-snug border border-gray-800 rounded p-2 bg-[#0d1420]/60 mt-1">
+                Supported coverage: the dashed frame on the map ({GRID_SRC[region]}). Routes compute only inside it; outside points are rejected, never guessed.
+              </div>
             </div>
           </section>
 
@@ -558,54 +562,79 @@ export default function App() {
             onUndoOverrun={() => setVisited(v => (v.length && v[v.length - 1].overrun) ? v.slice(0, -1) : v)}
             onReset={() => setVisited([])} />}
 
-          <section className="panel text-xs space-y-1.5">
-            <div className="eyebrow">Route between two points</div>
-            <div className="text-[10px] text-gray-500">Pick any two real places (or your own waypoints) - no assumed base, no automatic return. Geometry follows the route model chosen in the map Layers panel.</div>
-            <div className="flex items-center gap-1.5">
-              <select aria-label="Route from" className="flex-1 min-w-0 bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
-                value={abFrom || ''} onChange={e => setAbFrom(e.target.value || null)}>
-                <option value="">From...</option>
-                {realPlaces.filter(s => s.lat != null).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
-              </select>
-              <select aria-label="Route to" className="flex-1 min-w-0 bg-[#0d1420] border border-cyan-900 rounded px-1.5 py-1 text-xs text-gray-200"
-                value={abTo || ''} onChange={e => setAbTo(e.target.value || null)}>
-                <option value="">To...</option>
-                {realPlaces.filter(s => s.lat != null && s.id !== abFrom).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
-              </select>
+          <section className="panel text-xs">
+            <div className="panel-head">
+              <div className="eyebrow">Route between two points</div>
             </div>
-            {region === 'gale' && traverseGraph && (
-              <label className="flex items-start gap-1.5 text-[10px] text-gray-400">
-                <input type="checkbox" className="mt-0.5" checked={followTraverse} onChange={e => setFollowTraverse(e.target.checked)} />
-                <span>Follow Curiosity's recorded drive path (NASA MSL MMGIS traverse). Historical record, not a surveyed or walkable route. Refuses when the record has a gap.</span>
-              </label>)}
-            {region === 'gale' && traverseGraph && followTraverse && (
-              <label className="flex items-start gap-1.5 text-[10px] text-amber-300/90">
-                <input type="checkbox" className="mt-0.5" checked={allowTraverseConnectors} onChange={e => setAllowTraverseConnectors(e.target.checked)} />
-                <span>Experiment: bridge small archive gaps with synthetic connectors (dashed; NOT recorded drive ground - a routing convenience, not history).</span>
-              </label>)}
-            {region === 'gale' && followTraverse && abFrom && abTo && traverseResult && (
-              traverseResult.ok ? (
-                <div className="text-[11px] text-gray-300">
-                  {(traverseResult.distM / 1000).toFixed(2)} km along the recorded drives{traverseResult.syntheticM > 0 ? `, incl. ${Math.round(traverseResult.syntheticM)} m of dashed synthetic gap connectors (not recorded drive ground)` : ''}
-                  <span className="text-gray-500"> (endpoints snap {Math.round(traverseResult.snapFromM)} m / {Math.round(traverseResult.snapToM)} m to the record, limit {SNAP_TOLERANCE_M} m - those straight access hops are not drawn and not part of the distance)</span>
-                  {traverseResult.reversed === true && (
-                    <div className="text-amber-400 text-[10px]">Against the driven record: Curiosity drove this the other way{traverseResult.solFrom != null && traverseResult.solTo != null ? ` (sol ${traverseResult.solTo} -> ${traverseResult.solFrom})` : ''}. Shown reversed as geometry, not evidence it is drivable in reverse.</div>)}
+            <div className="panel-body space-y-3">
+              <div className="text-[10px] text-gray-400 leading-relaxed">
+                Pick any two real places (or your own waypoints) - no assumed base, no automatic return. Geometry follows the route model chosen in the map Layers panel.
+              </div>
+              <div className="route-pair">
+                <span className="route-label">From</span>
+                <div className="relative flex-1 min-w-0">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-[6px] h-[6px] rounded-full bg-[#22d3ee]/60"></span>
+                  <select aria-label="Route from" className="route-select"
+                    value={abFrom || ''} onChange={e => setAbFrom(e.target.value || null)}>
+                    <option value="">From...</option>
+                    {realPlaces.filter(s => s.lat != null).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
+                  </select>
                 </div>
-              ) : traverseResult.reason === 'snap-too-far' ? (
-                <div className="text-[11px] text-amber-400">Off the recorded path: nearest recorded drives to the two points are {Math.round(Math.min(traverseResult.snapFromM, traverseResult.snapToM))} m and {Math.round(Math.max(traverseResult.snapFromM, traverseResult.snapToM))} m away (limit {traverseResult.toleranceM} m). No path drawn.</div>
-              ) : traverseResult.reason === 'gap-in-record' ? (
-                <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - {traverseResult.gapM > 0 ? `the archive has a gap of about ${Math.round(traverseResult.gapM)} m here.` : 'the records end at the same spot but do not join (zero-distance archive break).'} No path drawn in strict recorded mode. Opt into the synthetic-connector experiment above to bridge it (dashed, not recorded ground).</div>
-              ) : (
-                <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - the archive has a gap here. No path drawn.</div>
-              ))}
-            {abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) && !traverseResult?.ok && (
-              abMetrics
-                ? <div className="text-[11px] text-gray-300">
-                    {(abMetrics.dist / 1000).toFixed(2)} km - {Math.round(abMetrics.minutes)} min walk{Math.round(abMetrics.asc) > 0 ? ` - +${Math.round(abMetrics.asc)} m up` : ''}
-                    <span className="text-gray-500"> ({routeModel === 'leastcost' ? 'least-cost terrain model' : 'straight-line baseline'}, one-way)</span>
+                <button
+                  type="button"
+                  title="Swap from/to"
+                  aria-label="Swap route endpoints"
+                  className="swap-btn"
+                  onClick={() => { const t = abTo; setAbTo(abFrom); setAbFrom(t); }}
+                >
+                  <SwapIcon size={13} />
+                </button>
+                <span className="route-label">To</span>
+                <div className="relative flex-1 min-w-0">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-[6px] h-[6px] rounded-full bg-[#f87171]/50"></span>
+                  <select aria-label="Route to" className="route-select"
+                    value={abTo || ''} onChange={e => setAbTo(e.target.value || null)}>
+                    <option value="">To...</option>
+                    {realPlaces.filter(s => s.lat != null && s.id !== abFrom).map(s => <option key={s.id} value={s.id}>{s.short || s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              {region === 'gale' && traverseGraph && (
+                <label className={`layer-check flex items-start gap-2 text-[10px] ${followTraverse ? 'layer-check--on' : ''}`}>
+                  <input type="checkbox" checked={followTraverse} onChange={e => setFollowTraverse(e.target.checked)} />
+                  <span className="layer-check-box"></span>
+                  <span>Follow Curiosity's recorded drive path (NASA MSL MMGIS traverse). Historical record, not a surveyed or walkable route. Refuses when the record has a gap.</span>
+                </label>)}
+              {region === 'gale' && traverseGraph && followTraverse && (
+                <label className={`layer-check flex items-start gap-2 text-[10px] ${allowTraverseConnectors ? 'layer-check--on' : ''}`}>
+                  <input type="checkbox" checked={allowTraverseConnectors} onChange={e => setAllowTraverseConnectors(e.target.checked)} />
+                  <span className="layer-check-box"></span>
+                  <span className="text-amber-300/90">Experiment: bridge small archive gaps with synthetic connectors (dashed; NOT recorded drive ground - a routing convenience, not history).</span>
+                </label>)}
+              {region === 'gale' && followTraverse && abFrom && abTo && traverseResult && (
+                traverseResult.ok ? (
+                  <div className="text-[11px] text-gray-300">
+                    {(traverseResult.distM / 1000).toFixed(2)} km along the recorded drives{traverseResult.syntheticM > 0 ? `, incl. ${Math.round(traverseResult.syntheticM)} m of dashed synthetic gap connectors (not recorded drive ground)` : ''}
+                    <span className="text-gray-500"> (endpoints snap {Math.round(traverseResult.snapFromM)} m / {Math.round(traverseResult.snapToM)} m to the record, limit {SNAP_TOLERANCE_M} m - those straight access hops are not drawn and not part of the distance)</span>
+                    {traverseResult.reversed === true && (
+                      <div className="text-amber-400 text-[10px]">Against the driven record: Curiosity drove this the other way{traverseResult.solFrom != null && traverseResult.solTo != null ? ` (sol ${traverseResult.solTo} -> ${traverseResult.solFrom})` : ''}. Shown reversed as geometry, not evidence it is drivable in reverse.</div>)}
                   </div>
-                : <div className="text-[11px] text-amber-400">No route: one of these points is outside the elevation data coverage, or the ground in between has no data. We do not guess a path.</div>
-            )}
+                ) : traverseResult.reason === 'snap-too-far' ? (
+                  <div className="text-[11px] text-amber-400">Off the recorded path: nearest recorded drives to the two points are {Math.round(Math.min(traverseResult.snapFromM, traverseResult.snapToM))} m and {Math.round(Math.max(traverseResult.snapFromM, traverseResult.snapToM))} m away (limit {traverseResult.toleranceM} m). No path drawn.</div>
+                ) : traverseResult.reason === 'gap-in-record' ? (
+                  <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - {traverseResult.gapM > 0 ? `the archive has a gap of about ${Math.round(traverseResult.gapM)} m here.` : 'the records end at the same spot but do not join (zero-distance archive break).'} No path drawn in strict recorded mode. Opt into the synthetic-connector experiment above to bridge it (dashed, not recorded ground).</div>
+                ) : (
+                  <div className="text-[11px] text-amber-400">The recorded drives do not connect these two points - the archive has a gap here. No path drawn.</div>
+                ))}
+              {abFrom && abTo && !(followTraverse && traverseResult && !traverseResult.ok) && !traverseResult?.ok && (
+                abMetrics
+                  ? <div className="text-[11px] text-gray-300">
+                      {(abMetrics.dist / 1000).toFixed(2)} km - {Math.round(abMetrics.minutes)} min walk{Math.round(abMetrics.asc) > 0 ? ` - +${Math.round(abMetrics.asc)} m up` : ''}
+                      <span className="text-gray-500"> ({routeModel === 'leastcost' ? 'least-cost terrain model' : 'straight-line baseline'}, one-way)</span>
+                    </div>
+                  : <div className="text-[11px] text-amber-400">No route: one of these points is outside the elevation data coverage, or the ground in between has no data. We do not guess a path.</div>
+              )}
+            </div>
           </section>
 
           {abFrom && abTo && (
@@ -675,11 +704,11 @@ function CoordinateEntry({ onAdd }) {
   return (
     <form className="mt-1 flex gap-1 items-center" onSubmit={e => { e.preventDefault(); if (valid) { onAdd(la, lo); setLat(''); setLon(''); } }}>
       <input value={lat} onChange={e => setLat(e.target.value)} placeholder="lat" inputMode="decimal"
-        className="w-1/2 bg-black border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono" />
+        className="flex-1 bg-[#0a0e17] border-[var(--line-strong)] rounded px-1.5 py-1 text-xs text-gray-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500" />
       <input value={lon} onChange={e => setLon(e.target.value)} placeholder="lon" inputMode="decimal"
-        className="w-1/2 bg-black border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono" />
+        className="flex-1 bg-[#0a0e17] border-[var(--line-strong)] rounded px-1.5 py-1 text-xs text-gray-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500" />
       <button type="submit" disabled={!valid}
-        className="px-1.5 py-0.5 bg-[#101826] border border-cyan-900 rounded text-cyan-300 text-[10px] disabled:opacity-40">add</button>
+        className="flex-shrink-0 px-2 py-1 rounded border border-cyan-500/60 bg-cyan-900/10 text-cyan-400 font-semibold text-[10px] hover:bg-cyan-900/30 disabled:opacity-40 disabled:border-cyan-900 disabled:text-cyan-600">add</button>
     </form>
   );
           }

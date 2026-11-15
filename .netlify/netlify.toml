@@ -7,7 +7,7 @@ headers = []
 [functions."*"]
 
 [build]
-publish = "/home/nullz/projects/nasaspaceapps/marswalk/dist"
+publish = "/home/nullz/projects/marswalk/dist"
 publishOrigin = "config"
 commandOrigin = "config"
 command = "npm run build"
